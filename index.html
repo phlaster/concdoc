@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>concdoc — PDF Concentration Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0f14;
+            --bg-elevated: #111920;
+            --fg: #e8eff6;
+            --muted: #5a6b7d;
+            --accent: #00d9a6;
+            --accent-dim: rgba(0, 217, 166, 0.15);
+            --card: #161f28;
+            --border: #243040;
+            --warning: #ffb347;
+            --error: #ff6b6b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            overflow: hidden;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-elevated); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+        .bg-pattern {
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(0, 217, 166, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 217, 166, 0.02) 0%, transparent 40%),
+                linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 100%);
+        }
+
+        .grid-overlay {
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        @keyframes borderGlow { 0%, 100% { box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(0, 217, 166, 0.1); } 50% { box-shadow: 0 0 0 1px var(--accent), 0 0 30px rgba(0, 217, 166, 0.2); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
+        .animate-pulse-slow { animation: pulse 2s ease-in-out infinite; }
+        .animate-glow { animation: borderGlow 2s ease-in-out infinite; }
+        .animate-spin { animation: spin 1s linear infinite; }
+
+        .stagger-children > * { opacity: 0; animation: slideUp 0.5s ease-out forwards; }
+        .stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+        .stagger-children > *:nth-child(2) { animation-delay: 0.15s; }
+        .stagger-children > *:nth-child(3) { animation-delay: 0.2s; }
+        .stagger-children > *:nth-child(4) { animation-delay: 0.25s; }
+        .stagger-children > *:nth-child(5) { animation-delay: 0.3s; }
+        .stagger-children > *:nth-child(6) { animation-delay: 0.35s; }
+        .stagger-children > *:nth-child(7) { animation-delay: 0.4s; }
+
+        #pdf-container { cursor: grab; user-select: none; }
+        #pdf-container.dragging { cursor: grabbing; }
+        #pdf-container.paused { cursor: not-allowed; }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            border-color: rgba(0, 217, 166, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg);
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(0, 217, 166, 0.3);
+        }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--fg);
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover {
+            border-color: var(--muted);
+            background: var(--bg-elevated);
+        }
+
+        .banner-overlay {
+            backdrop-filter: blur(8px);
+            background: rgba(10, 15, 20, 0.85);
+        }
+
+        .progress-ring circle { transition: stroke-dashoffset 0.5s ease; }
+
+        .tab-item { transition: all 0.2s ease; }
+        .tab-item:hover { background: var(--bg-elevated); }
+        .tab-item.active { background: var(--bg-elevated); border-bottom: 2px solid var(--accent); }
+        .tab-item.active .tab-title { color: var(--accent); }
+
+        /* Settings Menu & Z-Index Fix */
+        #card-timeline {
+            z-index: 10; /* Ensure timeline card sits above the next sibling (Session Details) */
+            position: relative;
+        }
+        
+        .settings-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            width: 240px;
+            z-index: 50; /* High z-index for the menu itself */
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: none;
+        }
+        .settings-menu.open {
+            display: block;
+        }
+
+        input[type="number"] {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--fg);
+            border-radius: 6px;
+            padding: 6px 8px;
+            width: 100%;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen bg-pattern">
+    <div class="h-full w-full grid grid-cols-1 lg:grid-cols-2 gap-0">
+        
+        <!-- LEFT SIDE -->
+        <div class="relative h-full border-r border-[--border] flex flex-col">
+            <div class="flex-shrink-0 bg-[--bg-elevated]/80 backdrop-blur-sm border-b border-[--border]">
+                <div class="flex items-end h-12 px-2" id="tabs-container">
+                    <button id="btn-add-tab" class="flex-shrink-0 px-3 py-2 text-[--muted] hover:text-[--fg] hover:bg-[--bg] rounded-t-lg transition-all" title="Add document">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>
+                    </button>
+                    <input type="file" id="file-input" accept=".pdf" class="hidden" multiple>
+                </div>
+            </div>
+
+            <div id="pdf-viewport" class="flex-1 relative overflow-hidden bg-[--bg] grid-overlay">
+                <div id="drop-zone" class="absolute inset-0 flex items-center justify-center z-10">
+                    <div class="text-center p-12 border-2 border-dashed border-[--border] rounded-2xl max-w-md transition-all duration-300 hover:border-[--accent] hover:bg-[--accent-dim] cursor-pointer" id="drop-target">
+                        <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-[--card] flex items-center justify-center">
+                            <svg class="w-8 h-8 text-[--muted]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Drop your PDF here</h3>
+                        <p class="text-[--muted] text-sm mb-4">or click to browse files</p>
+                        <span class="mono text-xs text-[--muted] bg-[--bg-elevated] px-3 py-1 rounded-full">.PDF</span>
+                    </div>
+                </div>
+
+                <div id="loading-overlay" class="absolute inset-0 banner-overlay flex items-center justify-center z-15 hidden">
+                    <div class="text-center">
+                        <div class="w-16 h-16 mx-auto mb-4 border-4 border-[--border] border-t-[--accent] rounded-full animate-spin"></div>
+                        <p class="text-[--muted]">Loading document...</p>
+                    </div>
+                </div>
+
+                <div id="pdf-container" class="absolute inset-0 overflow-hidden hidden">
+                    <div id="pdf-pages" class="relative" style="transform: translateY(0);"></div>
+                </div>
+
+                <div id="start-banner" class="absolute inset-0 banner-overlay flex items-center justify-center z-20 hidden">
+                    <button id="btn-start" class="group bg-[--card] border border-[--accent] rounded-2xl p-8 text-center animate-glow hover:scale-105 transition-transform">
+                        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-[--accent-dim] flex items-center justify-center group-hover:bg-[--accent] transition-colors">
+                            <svg class="w-10 h-10 text-[--accent] group-hover:text-[--bg] transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-semibold mb-2">Ready to Focus</h3>
+                        <p class="text-[--muted]">Click to start reading session</p>
+                    </button>
+                </div>
+
+                <div id="pause-banner" class="absolute inset-0 banner-overlay flex items-center justify-center z-20 hidden">
+                    <button id="btn-resume" class="group bg-[--card] border border-[--warning] rounded-2xl p-8 text-center hover:scale-105 transition-transform">
+                        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-[rgba(255,179,71,0.15)] flex items-center justify-center group-hover:bg-[--warning] transition-colors">
+                            <svg class="w-10 h-10 text-[--warning] group-hover:text-[--bg] transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-semibold mb-2">Session Paused</h3>
+                        <p class="text-[--muted]">Click to continue reading</p>
+                    </button>
+                </div>
+
+                <div id="page-indicator" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-[--bg-elevated] border border-[--border] rounded-full px-4 py-2 mono text-sm hidden">
+                    Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div class="h-full flex flex-col bg-[--bg-elevated] overflow-hidden">
+            <header class="flex-shrink-0 px-6 py-4 border-b border-[--border] flex items-center justify-between">
+                <div>
+                    <h2 class="font-semibold text-lg">Reading Statistics</h2>
+                    <p class="text-xs text-[--muted]">All documents combined</p>
+                </div>
+                <button id="btn-reset" class="btn-secondary px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Reset Stats
+                </button>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-6 stagger-children">
+                <div class="stat-card rounded-xl p-4 mb-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div id="status-dot" class="w-3 h-3 rounded-full bg-[--muted]"></div>
+                        <span id="status-text" class="font-medium">Waiting for document</span>
+                    </div>
+                    <span id="status-time" class="mono text-sm text-[--muted]">--:--</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="stat-card rounded-xl p-5">
+                        <p class="text-[--muted] text-sm mb-1">Total Elapsed</p>
+                        <p id="stat-elapsed" class="mono text-3xl font-medium text-[--fg]">00:00:00</p>
+                    </div>
+                    <div class="stat-card rounded-xl p-5">
+                        <p class="text-[--muted] text-sm mb-1">Reading Time</p>
+                        <p id="stat-reading" class="mono text-3xl font-medium text-[--accent]">00:00:00</p>
+                    </div>
+                    <div class="stat-card rounded-xl p-5">
+                        <p class="text-[--muted] text-sm mb-1">Pages Progress</p>
+                        <p id="stat-pages" class="mono text-3xl font-medium text-[--fg]">0</p>
+                    </div>
+                    <!-- SWAP 1: Focus Score moves here (Grid Bottom Right) -->
+                    <div class="stat-card rounded-xl p-5 relative overflow-hidden">
+                        <p class="text-[--muted] text-sm mb-1">Focus Score</p>
+                        <p id="stat-focus" class="mono text-3xl font-medium text-[--fg]">0%</p>
+                        <p class="text-xs text-[--muted] mt-1">Lifetime average</p>
+                        <div id="focus-bar" class="absolute bottom-0 left-0 h-1 bg-[--accent] transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- SWAP 2: Concentration moves here (Circle Section) -->
+                <div id="card-concentration" class="stat-card rounded-xl p-6 mb-6 flex items-center gap-6">
+                    <div class="relative flex-shrink-0">
+                        <svg class="progress-ring w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="42" stroke="var(--border)" stroke-width="8" fill="none"/>
+                            <circle id="progress-circle" cx="50" cy="50" r="42" stroke="var(--accent)" stroke-width="8" fill="none" 
+                                    stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round"/>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span id="ring-percentage" class="mono text-xl font-semibold">0%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-1">Concentration</h4>
+                        <p class="text-sm text-[--muted]">Rolling average for the last <span id="config-avg-label">2</span> minutes.</p>
+                    </div>
+                </div>
+
+                <!-- Timeline Card with Z-Index ID -->
+                <div id="card-timeline" class="stat-card rounded-xl p-6 mb-6 relative">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="font-semibold">Concentration Timeline</h4>
+                            <p class="text-xs text-[--muted]">Last <span id="config-history-label">60</span> min</p>
+                        </div>
+                        <div class="flex items-center gap-2 relative">
+                            <span class="w-2 h-2 rounded-full bg-[--accent] animate-pulse-slow"></span>
+                            <span class="text-xs text-[--muted]">Live</span>
+                            <button id="btn-settings" class="ml-2 text-[--muted] hover:text-[--fg] transition-colors" title="Timeline Settings">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </button>
+                            
+                            <!-- Settings Menu -->
+                            <div id="settings-menu" class="settings-menu">
+                                <h5 class="font-semibold text-sm mb-3 text-[--fg]">Timeline Settings</h5>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="text-xs text-[--muted] block mb-1">Measurement Interval (sec)</label>
+                                        <input type="number" id="input-interval" value="10" min="5" max="60">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-[--muted] block mb-1">Rolling Average Window (min)</label>
+                                        <input type="number" id="input-window" value="2" min="1" max="10">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-[--muted] block mb-1">History Length (min)</label>
+                                        <input type="number" id="input-history" value="60" min="10" max="120">
+                                    </div>
+                                    <button id="btn-apply-settings" class="w-full btn-primary py-2 rounded-lg text-sm mt-2">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="h-48">
+                        <canvas id="concentration-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="stat-card rounded-xl p-6">
+                    <h4 class="font-semibold mb-4">Session Details</h4>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-[--muted]">Documents Open</span>
+                            <span id="detail-docs" class="mono">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-[--muted]">Session Started</span>
+                            <span id="detail-start" class="mono">--:--:--</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-[--muted]">Pause Count</span>
+                            <span id="detail-pauses" class="mono">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-[--muted]">Avg. Pause Length</span>
+                            <span id="detail-pause-avg" class="mono">--:--</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-[--muted]">Avg. Concentration</span>
+                            <span id="detail-avg" class="mono">--%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // =====================
+        // State Management
+        // =====================
+        const globalState = {
+            sessionStartTime: null,
+            readingTimeMs: 0,
+            lastActionTime: null,
+            isReading: false,
+            isPaused: true,
+            pauseCount: 0,
+            totalPauseDuration: 0,
+            currentPauseStart: null,
+            slackTimer: null,
+            updateInterval: null, 
+            secondTimer: null, 
+            scoreTimer: null, 
+            
+            activeSeconds: 0, 
+            diffScores: [], 
+            timelineData: [], 
+            
+            config: {
+                measureIntervalSec: 10,
+                avgWindowMin: 2,
+                historyMin: 60
+            }
+        };
+
+        const documents = new Map();
+        let activeTabId = null;
+        let tabCounter = 0;
+        let currentDoc = null;
+
+        function createDocumentState(id, name) {
+            return {
+                id: id,
+                name: name,
+                pdfDoc: null,
+                pdfPages: [],
+                totalPages: 0,
+                isLoaded: false,
+                scrollTop: 0,
+                resumeScrollBaseline: 0,
+                currentPage: 1,
+                isDragging: false,
+                lastMouseY: 0,
+            };
+        }
+
+        // =====================
+        // DOM Elements
+        // =====================
+        const elements = {
+            fileInput: document.getElementById('file-input'),
+            dropZone: document.getElementById('drop-zone'),
+            dropTarget: document.getElementById('drop-target'),
+            loadingOverlay: document.getElementById('loading-overlay'),
+            pdfContainer: document.getElementById('pdf-container'),
+            pdfPages: document.getElementById('pdf-pages'),
+            startBanner: document.getElementById('start-banner'),
+            pauseBanner: document.getElementById('pause-banner'),
+            btnAddTab: document.getElementById('btn-add-tab'),
+            btnStart: document.getElementById('btn-start'),
+            btnResume: document.getElementById('btn-resume'),
+            btnReset: document.getElementById('btn-reset'),
+            tabsContainer: document.getElementById('tabs-container'),
+            pageIndicator: document.getElementById('page-indicator'),
+            currentPageEl: document.getElementById('current-page'),
+            totalPagesEl: document.getElementById('total-pages'),
+            statusDot: document.getElementById('status-dot'),
+            statusText: document.getElementById('status-text'),
+            statusTime: document.getElementById('status-time'),
+            statElapsed: document.getElementById('stat-elapsed'),
+            statReading: document.getElementById('stat-reading'),
+            statPages: document.getElementById('stat-pages'),
+            
+            // Swapped Elements
+            statFocus: document.getElementById('stat-focus'), // Grid item (Lifetime)
+            focusBar: document.getElementById('focus-bar'), // Grid item bar
+            ringPercentage: document.getElementById('ring-percentage'), // Circle (Rolling)
+            progressCircle: document.getElementById('progress-circle'), // Circle Ring
+            
+            detailDocs: document.getElementById('detail-docs'),
+            detailStart: document.getElementById('detail-start'),
+            detailPauses: document.getElementById('detail-pauses'),
+            detailPauseAvg: document.getElementById('detail-pause-avg'),
+            detailAvg: document.getElementById('detail-avg'),
+            
+            btnSettings: document.getElementById('btn-settings'),
+            settingsMenu: document.getElementById('settings-menu'),
+            inputInterval: document.getElementById('input-interval'),
+            inputWindow: document.getElementById('input-window'),
+            inputHistory: document.getElementById('input-history'),
+            btnApply: document.getElementById('btn-apply-settings'),
+            configAvgLabel: document.getElementById('config-avg-label'),
+            configHistoryLabel: document.getElementById('config-history-label'),
+        };
+
+        // =====================
+        // Chart Setup
+        // =====================
+        const chartCtx = document.getElementById('concentration-chart').getContext('2d');
+        const concentrationChart = new Chart(chartCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Concentration',
+                    data: [],
+                    borderColor: '#00d9a6',
+                    backgroundColor: 'rgba(0, 217, 166, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                scales: {
+                    x: { display: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6b7d', maxTicksLimit: 6, font: { family: 'JetBrains Mono', size: 10 } } },
+                    y: { display: true, min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6b7d', callback: val => val + '%', font: { family: 'JetBrains Mono', size: 10 } } }
+                },
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+
+        // =====================
+        // Utility Functions
+        // =====================
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function formatTimeShort(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function formatTimeClock(date) {
+            return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        }
+
+        function truncateFilename(name, maxLen = 20) {
+            if (name.length <= maxLen) return name;
+            const ext = name.slice(name.lastIndexOf('.'));
+            const base = name.slice(0, name.lastIndexOf('.'));
+            return base.slice(0, maxLen - ext.length - 3) + '...' + ext;
+        }
+
+        function updateStatus(text, colorClass) {
+            elements.statusText.textContent = text;
+            elements.statusDot.className = `w-3 h-3 rounded-full ${colorClass}`;
+        }
+
+        // =====================
+        // Tab Management
+        // =====================
+        function createTab(id, name) {
+            const tab = document.createElement('div');
+            tab.className = 'tab-item flex items-center gap-2 px-4 py-2 cursor-pointer border-r border-[--border] min-w-0 max-w-[180px]';
+            tab.dataset.tabId = id;
+            tab.innerHTML = `
+                <svg class="w-4 h-4 flex-shrink-0 text-[--muted]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span class="tab-title text-sm truncate">${truncateFilename(name)}</span>
+                <button class="close-tab ml-auto flex-shrink-0 text-[--muted] hover:text-[--fg] transition-colors" title="Close">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            tab.addEventListener('click', (e) => { if (!e.target.closest('.close-tab')) switchToTab(id); });
+            tab.querySelector('.close-tab').addEventListener('click', (e) => { e.stopPropagation(); closeTab(id); });
+            return tab;
+        }
+
+        function switchToTab(id) {
+            if (!documents.has(id)) return;
+            if (currentDoc && currentDoc.isLoaded) {
+                const transform = elements.pdfPages.style.transform;
+                const match = transform.match(/translateY\(-(\d+(?:\.\d+)?)px\)/);
+                if (match) currentDoc.scrollTop = parseFloat(match[1]);
+            }
+            activeTabId = id;
+            currentDoc = documents.get(id);
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.toggle('active', t.dataset.tabId === String(id)));
+            renderActiveDocument();
+        }
+
+        function closeTab(id) {
+            if (!documents.has(id)) return;
+            documents.delete(id);
+            const tabEl = document.querySelector(`[data-tab-id="${id}"]`);
+            if (tabEl) tabEl.remove();
+            if (activeTabId === id) {
+                const remainingIds = Array.from(documents.keys());
+                if (remainingIds.length > 0) switchToTab(remainingIds[0]);
+                else { activeTabId = null; currentDoc = null; showDropZone(); }
+            }
+            elements.detailDocs.textContent = documents.size;
+        }
+
+        function renderActiveDocument() {
+            if (!currentDoc || !currentDoc.isLoaded) { showDropZone(); return; }
+            elements.dropZone.classList.add('hidden');
+            elements.loadingOverlay.classList.add('hidden');
+            elements.pdfContainer.classList.remove('hidden');
+            elements.pageIndicator.classList.remove('hidden');
+            elements.pdfPages.innerHTML = '';
+            currentDoc.pdfPages.forEach(({canvas}) => {
+                const clone = canvas.cloneNode(true);
+                const ctx = clone.getContext('2d');
+                ctx.drawImage(canvas, 0, 0);
+                elements.pdfPages.appendChild(clone);
+            });
+            elements.pdfPages.style.transform = `translateY(-${currentDoc.scrollTop}px)`;
+            elements.totalPagesEl.textContent = currentDoc.totalPages;
+            elements.currentPageEl.textContent = currentDoc.currentPage;
+            if (globalState.sessionStartTime && globalState.isPaused) {
+                elements.pauseBanner.classList.remove('hidden'); elements.startBanner.classList.add('hidden');
+            } else if (globalState.sessionStartTime) {
+                elements.startBanner.classList.add('hidden'); elements.pauseBanner.classList.add('hidden');
+            } else {
+                elements.startBanner.classList.remove('hidden'); elements.pauseBanner.classList.add('hidden');
+            }
+        }
+
+        function showDropZone() {
+            elements.dropZone.classList.remove('hidden');
+            elements.loadingOverlay.classList.add('hidden');
+            elements.pdfContainer.classList.add('hidden');
+            elements.startBanner.classList.add('hidden');
+            elements.pauseBanner.classList.add('hidden');
+            elements.pageIndicator.classList.add('hidden');
+        }
+
+        function showLoading() {
+            elements.dropZone.classList.add('hidden');
+            elements.loadingOverlay.classList.remove('hidden');
+            elements.pdfContainer.classList.add('hidden');
+        }
+
+        // =====================
+        // PDF Loading
+        // =====================
+        async function loadPDF(file) {
+            showLoading();
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const id = ++tabCounter;
+                const docState = createDocumentState(id, file.name);
+                docState.pdfDoc = pdfDoc;
+                docState.totalPages = pdfDoc.numPages;
+                for (let i = 1; i <= docState.totalPages; i++) {
+                    const page = await pdfDoc.getPage(i);
+                    const viewport = page.getViewport({ scale: 1.5 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    canvas.className = 'block mx-auto mb-2';
+                    canvas.dataset.page = i;
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    docState.pdfPages.push({ canvas, height: viewport.height });
+                }
+                docState.isLoaded = true;
+                documents.set(id, docState);
+                const tab = createTab(id, file.name);
+                elements.tabsContainer.insertBefore(tab, elements.btnAddTab);
+                switchToTab(id);
+                elements.detailDocs.textContent = documents.size;
+                updateStatus('Ready to start', 'bg-[--warning]');
+            } catch (error) {
+                console.error('Failed to load PDF:', error);
+                showDropZone();
+                updateStatus('Failed to load PDF', 'bg-[--error]');
+            }
+        }
+
+        // =====================
+        // Drag & Drop Handling
+        // =====================
+        function setupDragDrop() {
+            const dropTarget = elements.dropTarget;
+            const fileInput = elements.fileInput;
+            dropTarget.addEventListener('click', () => fileInput.click());
+            elements.btnAddTab.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                Array.from(e.target.files).forEach(file => { if (file.type === 'application/pdf') loadPDF(file); });
+                e.target.value = '';
+            });
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+                dropTarget.addEventListener(event, (e) => { e.preventDefault(); e.stopPropagation(); });
+            });
+            dropTarget.addEventListener('dragover', () => dropTarget.classList.add('border-[--accent]', 'bg-[--accent-dim]'));
+            dropTarget.addEventListener('dragleave', () => dropTarget.classList.remove('border-[--accent]', 'bg-[--accent-dim]'));
+            dropTarget.addEventListener('drop', (e) => {
+                dropTarget.classList.remove('border-[--accent]', 'bg-[--accent-dim]');
+                Array.from(e.dataTransfer.files).forEach(file => { if (file.type === 'application/pdf') loadPDF(file); });
+            });
+        }
+
+        // =====================
+        // Reading Controls
+        // =====================
+        function startSession() {
+            globalState.sessionStartTime = Date.now();
+            globalState.readingTimeMs = 0;
+            globalState.lastActionTime = Date.now();
+            globalState.isReading = true;
+            globalState.isPaused = false;
+            globalState.pauseCount = 0;
+            globalState.totalPauseDuration = 0;
+            globalState.activeSeconds = 0;
+            globalState.diffScores = [];
+            globalState.timelineData = [];
+            
+            documents.forEach(doc => doc.resumeScrollBaseline = doc.scrollTop);
+            elements.startBanner.classList.add('hidden');
+            elements.detailStart.textContent = formatTimeClock(new Date());
+            updateStatus('Reading', 'bg-[--accent] animate-pulse-slow');
+            startTimers();
+        }
+
+        function pauseSession() {
+            if (globalState.isPaused) return;
+            globalState.isPaused = true;
+            globalState.isReading = false;
+            globalState.pauseCount++;
+            globalState.currentPauseStart = Date.now();
+            elements.pauseBanner.classList.remove('hidden');
+            elements.pdfContainer.classList.add('paused');
+            updateStatus('Paused', 'bg-[--warning]');
+            elements.detailPauses.textContent = globalState.pauseCount;
+        }
+
+        function resumeSession() {
+            globalState.isPaused = false;
+            globalState.isReading = true;
+            globalState.lastActionTime = Date.now();
+            if (globalState.currentPauseStart) {
+                const pauseDuration = Date.now() - globalState.currentPauseStart;
+                globalState.totalPauseDuration += pauseDuration;
+                globalState.currentPauseStart = null;
+                const avgPause = globalState.totalPauseDuration / globalState.pauseCount;
+                elements.detailPauseAvg.textContent = formatTimeShort(avgPause);
+            }
+            if (currentDoc) currentDoc.resumeScrollBaseline = currentDoc.scrollTop;
+            elements.pauseBanner.classList.add('hidden');
+            elements.pdfContainer.classList.remove('paused');
+            updateStatus('Reading', 'bg-[--accent] animate-pulse-slow');
+        }
+
+        function resetSession() {
+            stopTimers();
+            globalState.sessionStartTime = null;
+            globalState.readingTimeMs = 0;
+            globalState.pauseCount = 0;
+            globalState.totalPauseDuration = 0;
+            globalState.currentPauseStart = null;
+            globalState.isReading = false;
+            globalState.isPaused = true;
+            globalState.activeSeconds = 0;
+            globalState.diffScores = [];
+            globalState.timelineData = [];
+            
+            documents.forEach(doc => doc.resumeScrollBaseline = 0);
+            concentrationChart.data.labels = [];
+            concentrationChart.data.datasets[0].data = [];
+            concentrationChart.update();
+            
+            elements.statElapsed.textContent = '00:00:00';
+            elements.statReading.textContent = '00:00:00';
+            elements.statPages.textContent = '0';
+            
+            // Reset swapped elements
+            elements.statFocus.textContent = '0%';
+            elements.focusBar.style.width = '0%';
+            elements.ringPercentage.textContent = '0%';
+            elements.progressCircle.style.strokeDashoffset = 264;
+            
+            elements.detailStart.textContent = '--:--:--';
+            elements.detailPauses.textContent = '0';
+            elements.detailPauseAvg.textContent = '--:--';
+            elements.detailAvg.textContent = '--%';
+            elements.statusTime.textContent = '--:--';
+            
+            if (documents.size > 0) {
+                elements.startBanner.classList.remove('hidden');
+                elements.pauseBanner.classList.add('hidden');
+                updateStatus('Ready to start', 'bg-[--warning]');
+            }
+        }
+
+        // =====================
+        // Timer Functions
+        // =====================
+        function startTimers() {
+            globalState.updateInterval = setInterval(updateStats, 100);
+            
+            globalState.secondTimer = setInterval(() => {
+                if (globalState.isReading) globalState.activeSeconds++;
+            }, 1000);
+
+            startScoreTimer();
+        }
+
+        function startScoreTimer() {
+            if (globalState.scoreTimer) clearInterval(globalState.scoreTimer);
+            
+            const intervalMs = globalState.config.measureIntervalSec * 1000;
+            
+            globalState.scoreTimer = setInterval(() => {
+                if (!globalState.sessionStartTime) return;
+
+                // Calculate score for the passed window
+                const score = Math.round((globalState.activeSeconds / globalState.config.measureIntervalSec) * 100);
+                
+                // Reset counter
+                globalState.activeSeconds = 0;
+
+                // Add to history queue
+                globalState.diffScores.push(score);
+
+                // Limit queue size
+                const maxItems = (globalState.config.historyMin * 60) / globalState.config.measureIntervalSec;
+                if (globalState.diffScores.length > maxItems) {
+                    globalState.diffScores.shift();
+                }
+
+                // Calculate Rolling Average for Chart
+                const windowItems = (globalState.config.avgWindowMin * 60) / globalState.config.measureIntervalSec;
+                const recentScores = globalState.diffScores.slice(-windowItems);
+                const avgScore = recentScores.length > 0 
+                    ? Math.round(recentScores.reduce((a, b) => a + b, 0) / recentScores.length) 
+                    : 0;
+
+                // Update Chart
+                const timeLabel = formatTimeClock(new Date());
+                globalState.timelineData.push(avgScore);
+                
+                const chartPoints = (globalState.config.historyMin * 60) / globalState.config.measureIntervalSec;
+                if (globalState.timelineData.length > chartPoints) {
+                    globalState.timelineData.shift();
+                    concentrationChart.data.labels.shift();
+                }
+                
+                concentrationChart.data.labels.push(timeLabel);
+                concentrationChart.data.datasets[0].data = globalState.timelineData;
+                concentrationChart.update('none');
+
+                // UPDATE SWAPPED CONCENTRATION (Circle)
+                elements.ringPercentage.textContent = avgScore + '%';
+                const offset = 264 - (264 * Math.min(100, avgScore) / 100);
+                elements.progressCircle.style.strokeDashoffset = offset;
+
+                // Update Detail Avg
+                if (globalState.timelineData.length > 0) {
+                    const totalAvg = Math.round(globalState.timelineData.reduce((a, b) => a + b, 0) / globalState.timelineData.length);
+                    elements.detailAvg.textContent = totalAvg + '%';
+                }
+
+            }, intervalMs);
+        }
+
+        function stopTimers() {
+            clearInterval(globalState.updateInterval);
+            clearInterval(globalState.secondTimer);
+            clearInterval(globalState.scoreTimer);
+            clearTimeout(globalState.slackTimer);
+        }
+
+        function updateStats() {
+            if (!globalState.sessionStartTime) return;
+            
+            const now = Date.now();
+            const totalElapsed = now - globalState.sessionStartTime;
+            
+            // Update Lifetime Reading Time
+            if (globalState.isReading && globalState.lastActionTime) {
+                globalState.readingTimeMs += now - globalState.lastActionTime;
+                globalState.lastActionTime = now;
+            }
+            
+            // Calculate Focus Score (Lifetime)
+            const focusScore = totalElapsed > 0 ? Math.round((globalState.readingTimeMs / totalElapsed) * 100) : 0;
+            
+            elements.statElapsed.textContent = formatTime(totalElapsed);
+            elements.statReading.textContent = formatTime(globalState.readingTimeMs);
+            elements.statusTime.textContent = formatTime(totalElapsed);
+            
+            // UPDATE SWAPPED FOCUS SCORE (Grid)
+            elements.statFocus.textContent = focusScore + '%';
+            elements.focusBar.style.width = focusScore + '%';
+            
+            // Update Pages
+            let totalPagesProgress = 0;
+            documents.forEach(doc => {
+                const progress = Math.max(0, doc.scrollTop - doc.resumeScrollBaseline);
+                if (doc.pdfPages.length > 0) {
+                    const avgPageHeight = doc.pdfPages.reduce((sum, p) => sum + p.height, 0) / doc.pdfPages.length;
+                    totalPagesProgress += Math.floor(progress / avgPageHeight);
+                }
+            });
+            elements.statPages.textContent = totalPagesProgress;
+        }
+
+        // =====================
+        // Settings Menu
+        // =====================
+        function setupSettings() {
+            elements.btnSettings.addEventListener('click', (e) => {
+                e.stopPropagation();
+                elements.settingsMenu.classList.toggle('open');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!elements.settingsMenu.contains(e.target) && e.target !== elements.btnSettings) {
+                    elements.settingsMenu.classList.remove('open');
+                }
+            });
+
+            elements.btnApply.addEventListener('click', (e) => {
+                e.preventDefault();
+                const interval = parseInt(elements.inputInterval.value);
+                const window = parseInt(elements.inputWindow.value);
+                const history = parseInt(elements.inputHistory.value);
+
+                if (interval >= 5 && window >= 1 && history >= 10) {
+                    globalState.config.measureIntervalSec = interval;
+                    globalState.config.avgWindowMin = window;
+                    globalState.config.historyMin = history;
+
+                    elements.configAvgLabel.textContent = window;
+                    elements.configHistoryLabel.textContent = history;
+
+                    globalState.diffScores = [];
+                    globalState.timelineData = [];
+                    concentrationChart.data.labels = [];
+                    concentrationChart.data.datasets[0].data = [];
+                    concentrationChart.update();
+
+                    if (globalState.sessionStartTime) {
+                        startScoreTimer();
+                    }
+
+                    elements.settingsMenu.classList.remove('open');
+                }
+            });
+        }
+
+        // =====================
+        // Scroll Handling
+        // =====================
+        function setupScrollHandling() {
+            const container = elements.pdfContainer;
+            const pagesEl = elements.pdfPages;
+            
+            container.addEventListener('mousedown', (e) => {
+                if (!currentDoc || !currentDoc.isLoaded || globalState.isPaused) return;
+                currentDoc.isDragging = true;
+                currentDoc.lastMouseY = e.clientY;
+                container.classList.add('dragging');
+                clearTimeout(globalState.slackTimer);
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!currentDoc || !currentDoc.isDragging) return;
+                const deltaY = e.clientY - currentDoc.lastMouseY;
+                currentDoc.lastMouseY = e.clientY;
+                const containerHeight = container.clientHeight;
+                const contentHeight = pagesEl.scrollHeight;
+                const maxScroll = Math.max(0, contentHeight - containerHeight);
+                currentDoc.scrollTop = Math.max(0, Math.min(maxScroll, currentDoc.scrollTop - deltaY));
+                pagesEl.style.transform = `translateY(-${currentDoc.scrollTop}px)`;
+                updateCurrentPage();
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (!currentDoc || !currentDoc.isDragging) return;
+                currentDoc.isDragging = false;
+                container.classList.remove('dragging');
+                if (globalState.isReading && !globalState.isPaused) {
+                    clearTimeout(globalState.slackTimer);
+                    globalState.slackTimer = setTimeout(pauseSession, 5000);
+                }
+            });
+        }
+
+        function updateCurrentPage() {
+            if (!currentDoc || !currentDoc.pdfPages.length) return;
+            const containerHeight = elements.pdfContainer.clientHeight;
+            const viewportCenter = currentDoc.scrollTop + containerHeight / 2;
+            let currentHeight = 0;
+            for (let i = 0; i < currentDoc.pdfPages.length; i++) {
+                currentHeight += currentDoc.pdfPages[i].height;
+                if (viewportCenter < currentHeight) {
+                    currentDoc.currentPage = i + 1;
+                    elements.currentPageEl.textContent = currentDoc.currentPage;
+                    break;
+                }
+            }
+        }
+
+        // =====================
+        // Event Bindings
+        // =====================
+        function bindEvents() {
+            elements.btnStart.addEventListener('click', startSession);
+            elements.btnResume.addEventListener('click', resumeSession);
+            elements.btnReset.addEventListener('click', resetSession);
+        }
+
+        // =====================
+        // Initialize
+        // =====================
+        function init() {
+            setupDragDrop();
+            setupScrollHandling();
+            setupSettings();
+            bindEvents();
+            updateStatus('Waiting for document', 'bg-[--muted]');
+        }
+
+        init();
+    </script>
+</body>
+</html>
