@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>concdoc — stay concentrated!</title>
+    <title>concdoc</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -16,8 +16,8 @@
             --bg-elevated: #111920;
             --fg: #e8eff6;
             --muted: #5a6b7d;
-            --accent: #00d9a6;
-            --accent-dim: rgba(0, 217, 166, 0.15);
+            --accent: #C4956A; /* Updated Brown */
+            --accent-dim: rgba(196, 149, 106, 0.15);
             --card: #161f28;
             --border: #243040;
             --warning: #ffb347;
@@ -31,6 +31,8 @@
             background: var(--bg);
             color: var(--fg);
             overflow: hidden;
+            height: 100vh;
+            width: 100vw;
         }
 
         .mono { font-family: 'JetBrains Mono', monospace; }
@@ -42,8 +44,8 @@
 
         .bg-pattern {
             background-image: 
-                radial-gradient(circle at 20% 80%, rgba(0, 217, 166, 0.03) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(0, 217, 166, 0.02) 0%, transparent 40%),
+                radial-gradient(circle at 20% 80%, rgba(196, 149, 106, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(196, 149, 106, 0.02) 0%, transparent 40%),
                 linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 100%);
         }
 
@@ -54,10 +56,11 @@
             background-size: 40px 40px;
         }
 
+        /* Animations */
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        @keyframes borderGlow { 0%, 100% { box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(0, 217, 166, 0.1); } 50% { box-shadow: 0 0 0 1px var(--accent), 0 0 30px rgba(0, 217, 166, 0.2); } }
+        @keyframes borderGlow { 0%, 100% { box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(196, 149, 106, 0.1); } 50% { box-shadow: 0 0 0 1px var(--accent), 0 0 30px rgba(196, 149, 106, 0.2); } }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
@@ -81,12 +84,9 @@
         .stat-card {
             background: var(--card);
             border: 1px solid var(--border);
-            transition: all 0.3s ease;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
         }
-        .stat-card:hover {
-            border-color: rgba(0, 217, 166, 0.3);
-            transform: translateY(-2px);
-        }
+        .stat-card:hover { border-color: rgba(196, 149, 106, 0.3); }
 
         .btn-primary {
             background: var(--accent);
@@ -96,7 +96,7 @@
         }
         .btn-primary:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 20px rgba(0, 217, 166, 0.3);
+            box-shadow: 0 4px 20px rgba(196, 149, 106, 0.3);
         }
         .btn-primary:active { transform: translateY(0); }
 
@@ -111,7 +111,80 @@
             background: var(--bg-elevated);
         }
 
-        /* Pause Overlay */
+        /* --- Layout Components --- */
+
+        #pdf-wrapper {
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            right: 0; 
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #stats-panel {
+            position: absolute;
+            z-index: 10;
+            background: var(--bg-elevated);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -5px 0 20px rgba(0,0,0,0.3);
+        }
+
+        /* Mobile Mode (< lg) */
+        @media (max-width: 1023px) {
+            #pdf-wrapper { right: 0 !important; }
+            
+            #stats-panel {
+                bottom: 0; left: 0; right: 0;
+                top: auto;
+                width: 100%;
+                height: 85vh; 
+                border-radius: 16px 16px 0 0;
+                border-top: 1px solid var(--border);
+                transform: translateY(0);
+            }
+            #stats-panel.minimized {
+                transform: translateY(calc(100% - 48px));
+            }
+
+            #stats-panel.minimized #btn-reset {
+                display: none;
+            }
+
+            #page-indicator {
+                bottom: 4rem;
+            }
+            
+            #btn-toggle-mobile { display: flex !important; }
+            #btn-toggle-desktop { display: none !important; }
+        }
+
+        /* Desktop Mode (>= lg) */
+        @media (min-width: 1024px) {
+            #pdf-wrapper.stats-visible-desktop {
+                right: 50%;
+            }
+
+            #stats-panel {
+                top: 0; right: 0; bottom: 0;
+                left: auto;
+                width: 50%;
+                border-left: 1px solid var(--border);
+                border-radius: 0;
+                transform: translateX(0);
+            }
+            
+            #stats-panel.hidden-desktop {
+                transform: translateX(100%);
+            }
+            
+            #btn-toggle-mobile { display: none !important; }
+            #btn-toggle-desktop { display: flex !important; }
+        }
+
         #pause-overlay {
             position: absolute;
             inset: 0;
@@ -126,14 +199,12 @@
             align-items: center;
             justify-content: center;
         }
-
         #pause-overlay.active {
             opacity: 1;
             backdrop-filter: blur(6px);
             pointer-events: auto;
         }
 
-        /* Pause Prompt Text */
         #pause-prompt {
             opacity: 0;
             transform: translateY(10px);
@@ -141,49 +212,11 @@
             text-align: center;
             pointer-events: none;
         }
-
         #pause-overlay.show-prompt #pause-prompt {
             opacity: 1;
             transform: translateY(0);
         }
 
-        #card-timeline {
-            z-index: 10;
-            position: relative;
-        }
-        
-        .settings-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 8px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
-            width: 240px;
-            z-index: 50;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            display: none;
-        }
-        .settings-menu.open { display: block; }
-
-        input[type="number"] {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--fg);
-            border-radius: 6px;
-            padding: 6px 8px;
-            width: 100%;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-        }
-        input[type="number"]:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        /* Virtual Scroll Container */
         #pdf-pages { position: relative; width: 100%; }
         .pdf-page-canvas { 
             display: block; 
@@ -193,212 +226,251 @@
             right: 0;
         }
 
+        .header-control-btn {
+            margin-right: 8px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header-control-btn:hover { background: var(--bg); }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
                 animation-iteration-count: 1 !important;
                 transition-duration: 0.01ms !important;
             }
-            #pause-overlay, #pause-prompt { transition: none; }
         }
     </style>
 </head>
-<body class="h-screen w-screen bg-pattern">
-    <div class="h-full w-full grid grid-cols-1 lg:grid-cols-2 gap-0">
-        
-        <!-- LEFT SIDE -->
-        <div class="relative h-full border-r border-[--border] flex flex-col">
-            <div class="flex-shrink-0 bg-[--bg-elevated]/80 backdrop-blur-sm border-b border-[--border]">
-                <div class="flex items-end h-12 px-2" id="tabs-container">
-                    <button id="btn-add-tab" class="flex-shrink-0 px-3 py-2 text-[--muted] hover:text-[--fg] hover:bg-[--bg] rounded-t-lg transition-all" title="Add document">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                        </svg>
-                    </button>
-                    <input type="file" id="file-input" accept=".pdf" class="hidden" multiple>
-                </div>
-            </div>
+<body class="bg-pattern">
 
-            <div id="pdf-viewport" class="flex-1 relative overflow-hidden bg-[--bg] grid-overlay">
-                <div id="drop-zone" class="absolute inset-0 flex items-center justify-center z-10">
-                    <div class="text-center p-12 border-2 border-dashed border-[--border] rounded-2xl max-w-md transition-all duration-300 hover:border-[--accent] hover:bg-[--accent-dim] cursor-pointer" id="drop-target">
-                        <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-[--card] flex items-center justify-center">
-                            <svg class="w-8 h-8 text-[--muted]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2">Drop your PDF here</h3>
-                        <p class="text-[--muted] text-sm mb-4">or click to browse files</p>
-                        <span class="mono text-xs text-[--muted] bg-[--bg-elevated] px-3 py-1 rounded-full">.PDF</span>
-                    </div>
-                </div>
-
-                <div id="loading-overlay" class="absolute inset-0 bg-[rgba(10,15,20,0.9)] flex items-center justify-center z-15 hidden">
-                    <div class="text-center">
-                        <div class="w-16 h-16 mx-auto mb-4 border-4 border-[--border] border-t-[--accent] rounded-full animate-spin"></div>
-                        <p class="text-[--muted]">Loading document...</p>
-                    </div>
-                </div>
-
-                <div id="pdf-container" class="absolute inset-0 overflow-hidden hidden">
-                    <div id="pdf-pages" class="relative"></div>
-                </div>
-
-                <!-- Pause Overlay with Prompt inside -->
-                <div id="pause-overlay" class="">
-                    <div id="pause-prompt">
-                        <p id="pause-timer" class="mono text-4xl text-[--fg] opacity-80 mb-2">00:00</p>
-                        <p class="text-base text-[--muted]">Paused. Click or drag to continue reading.</p>
-                    </div>
-                </div>
-
-                <div id="start-banner" class="absolute inset-0 bg-[rgba(10,15,20,0.85)] backdrop-blur-sm flex items-center justify-center z-20 hidden">
-                    <button id="btn-start" class="group bg-[--card] border border-[--accent] rounded-2xl p-8 text-center animate-glow hover:scale-105 transition-transform">
-                        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-[--accent-dim] flex items-center justify-center group-hover:bg-[--accent] transition-colors">
-                            <svg class="w-10 h-10 text-[--accent] group-hover:text-[--bg] transition-colors" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-semibold mb-2">Ready to Focus</h3>
-                        <p class="text-[--muted]">Click to start reading session</p>
-                    </button>
-                </div>
-
-                <div id="page-indicator" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-[--bg-elevated] border border-[--border] rounded-full px-4 py-2 mono text-sm hidden">
-                    Page <span id="current-page">1</span> of <span id="total-pages">1</span>
-                </div>
+    <!-- PDF WRAPPER (Layer 1) -->
+    <div id="pdf-wrapper" class="grid-overlay">
+        <!-- Tabs Header -->
+        <div class="flex-shrink-0 bg-[--bg-elevated]/80 backdrop-blur-sm border-b border-[--border]">
+            <div class="flex items-end h-12 px-2" id="tabs-container">
+                <button id="btn-add-tab" class="flex-shrink-0 px-3 py-2 text-[--muted] hover:text-[--fg] hover:bg-[--bg] rounded-t-lg transition-all" title="Add document">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                </button>
+                <input type="file" id="file-input" accept=".pdf" class="hidden" multiple>
             </div>
         </div>
 
-        <!-- RIGHT SIDE -->
-        <div class="h-full flex flex-col bg-[--bg-elevated] overflow-hidden">
-            <header class="flex-shrink-0 px-6 py-4 border-b border-[--border] flex items-center justify-between">
+        <!-- Viewport -->
+        <div id="pdf-viewport" class="flex-1 relative overflow-hidden bg-[--bg]">
+            <div id="drop-zone" class="absolute inset-0 flex items-center justify-center z-10 pt-12">
+                <div class="text-center p-12 border-2 border-dashed border-[--border] rounded-2xl max-w-md transition-all duration-300 hover:border-[--accent] hover:bg-[--accent-dim] cursor-pointer" id="drop-target">
+                    <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-[--card] flex items-center justify-center">
+                        <svg class="w-8 h-8 text-[--muted]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Drop your PDF here</h3>
+                    <p class="text-[--muted] text-sm mb-4">or click to browse files</p>
+                </div>
+            </div>
+
+            <div id="loading-overlay" class="absolute inset-0 bg-[rgba(10,15,20,0.9)] flex items-center justify-center z-15 hidden pt-12">
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-4 border-4 border-[--border] border-t-[--accent] rounded-full animate-spin"></div>
+                    <p class="text-[--muted]">Loading document...</p>
+                </div>
+            </div>
+
+            <div id="pdf-container" class="absolute inset-0 overflow-hidden hidden pt-12">
+                <div id="pdf-pages" class="relative"></div>
+            </div>
+
+            <!-- Pause Overlay -->
+            <div id="pause-overlay" class="pt-12">
+                <div id="pause-prompt">
+                    <p id="pause-timer" class="mono text-4xl text-[--fg] opacity-80 mb-2">00:00</p>
+                    <p class="text-base text-[--fg] opacity-80">Paused. Click or drag to continue reading.</p>
+                </div>
+            </div>
+
+            <div id="start-banner" class="absolute inset-0 bg-[rgba(10,15,20,0.85)] backdrop-blur-sm flex items-center justify-center z-20 hidden pt-12">
+                <button id="btn-start" class="group bg-[--card] border border-[--accent] rounded-2xl p-8 text-center animate-glow hover:scale-105 transition-transform">
+                    <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-[--accent-dim] flex items-center justify-center group-hover:bg-[--accent] transition-colors">
+                        <svg class="w-10 h-10 text-[--accent] group-hover:text-[--bg] transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-2">Ready to Focus</h3>
+                    <p class="text-[--muted]">Click to start reading session</p>
+                </button>
+            </div>
+
+            <div id="page-indicator" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-[--bg-elevated] border border-[--border] rounded-full px-4 py-2 mono text-sm hidden">
+                Page <span id="current-page">1</span> of <span id="total-pages">1</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATS PANEL (Layer 2) -->
+    <div id="stats-panel" class="minimized">
+        <header class="flex-shrink-0 px-6 py-4 border-b border-[--border] flex items-center justify-between cursor-pointer" id="stats-header">
+            <div class="flex items-center">
+                <!-- Mobile Toggle (Chevron) -->
+                <button id="btn-toggle-mobile" class="header-control-btn" title="Toggle Stats">
+                    <svg class="w-5 h-5 text-[--muted] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                
+                <!-- Desktop Toggle (Lock) -->
+                <button id="btn-toggle-desktop" class="header-control-btn" title="Lock/Unlock Stats Panel">
+                    <svg id="icon-lock" class="w-5 h-5 text-[--accent]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <svg id="icon-unlock" class="w-5 h-5 text-[--muted] hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                    </svg>
+                </button>
+
                 <div>
                     <h2 class="font-semibold text-lg">Reading Statistics</h2>
-                    <p class="text-xs text-[--muted]">All documents combined</p>
                 </div>
-                <button id="btn-reset" class="btn-secondary px-4 py-2 rounded-lg text-sm flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </div>
+            <button id="btn-reset" class="btn-secondary px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Reset
+            </button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 stagger-children">
+            <!-- Stats Content -->
+            <div class="stat-card rounded-xl p-4 mb-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div id="status-dot" class="w-3 h-3 rounded-full bg-[--muted]"></div>
+                    <span id="status-text" class="font-medium">Waiting for document</span>
+                </div>
+                <span id="status-time" class="mono text-sm text-[--muted]">--:--</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="stat-card rounded-xl p-5">
+                    <p class="text-[--muted] text-sm mb-1">Total Elapsed</p>
+                    <p id="stat-elapsed" class="mono text-3xl font-medium text-[--fg]">00:00:00</p>
+                </div>
+                <div class="stat-card rounded-xl p-5">
+                    <p class="text-[--muted] text-sm mb-1">Reading Time</p>
+                    <p id="stat-reading" class="mono text-3xl font-medium text-[--accent]">00:00:00</p>
+                </div>
+                <div class="stat-card rounded-xl p-5">
+                    <p class="text-[--muted] text-sm mb-1">Pages Progress</p>
+                    <p id="stat-pages" class="mono text-3xl font-medium text-[--fg]">0</p>
+                </div>
+                <div class="stat-card rounded-xl p-5 relative overflow-hidden">
+                    <p class="text-[--muted] text-sm mb-1">Focus Score</p>
+                    <p id="stat-focus" class="mono text-3xl font-medium text-[--fg]">0%</p>
+                    <p class="text-xs text-[--muted] mt-1">Lifetime average</p>
+                    <div id="focus-bar" class="absolute bottom-0 left-0 h-1 bg-[--accent] transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div id="card-concentration" class="stat-card rounded-xl p-6 mb-6 flex items-center gap-6">
+                <div class="relative flex-shrink-0">
+                    <svg class="progress-ring w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" stroke="var(--border)" stroke-width="8" fill="none"/>
+                        <circle id="progress-circle" cx="50" cy="50" r="42" stroke="var(--accent)" stroke-width="8" fill="none" 
+                                stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round"/>
                     </svg>
-                    Reset Stats
-                </button>
-            </header>
-
-            <div class="flex-1 overflow-y-auto p-6 stagger-children">
-                <div class="stat-card rounded-xl p-4 mb-4 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div id="status-dot" class="w-3 h-3 rounded-full bg-[--muted]"></div>
-                        <span id="status-text" class="font-medium">Waiting for document</span>
-                    </div>
-                    <span id="status-time" class="mono text-sm text-[--muted]">--:--</span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <div class="stat-card rounded-xl p-5">
-                        <p class="text-[--muted] text-sm mb-1">Total Elapsed</p>
-                        <p id="stat-elapsed" class="mono text-3xl font-medium text-[--fg]">00:00:00</p>
-                    </div>
-                    <div class="stat-card rounded-xl p-5">
-                        <p class="text-[--muted] text-sm mb-1">Reading Time</p>
-                        <p id="stat-reading" class="mono text-3xl font-medium text-[--accent]">00:00:00</p>
-                    </div>
-                    <div class="stat-card rounded-xl p-5">
-                        <p class="text-[--muted] text-sm mb-1">Pages Progress</p>
-                        <p id="stat-pages" class="mono text-3xl font-medium text-[--fg]">0</p>
-                    </div>
-                    <div class="stat-card rounded-xl p-5 relative overflow-hidden">
-                        <p class="text-[--muted] text-sm mb-1">Focus Score</p>
-                        <p id="stat-focus" class="mono text-3xl font-medium text-[--fg]">0%</p>
-                        <p class="text-xs text-[--muted] mt-1">Lifetime average</p>
-                        <div id="focus-bar" class="absolute bottom-0 left-0 h-1 bg-[--accent] transition-all duration-500" style="width: 0%"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span id="ring-percentage" class="mono text-xl font-semibold">0%</span>
                     </div>
                 </div>
+                <div>
+                    <h4 class="font-semibold mb-1">Concentration</h4>
+                    <p class="text-sm text-[--muted]">Rolling average for the last <span id="config-avg-label">2</span> minutes.</p>
+                </div>
+            </div>
 
-                <div id="card-concentration" class="stat-card rounded-xl p-6 mb-6 flex items-center gap-6">
-                    <div class="relative flex-shrink-0">
-                        <svg class="progress-ring w-24 h-24 -rotate-90" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="42" stroke="var(--border)" stroke-width="8" fill="none"/>
-                            <circle id="progress-circle" cx="50" cy="50" r="42" stroke="var(--accent)" stroke-width="8" fill="none" 
-                                    stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round"/>
-                        </svg>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <span id="ring-percentage" class="mono text-xl font-semibold">0%</span>
-                        </div>
-                    </div>
+            <div id="card-timeline" class="stat-card rounded-xl p-6 mb-6 relative">
+                <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h4 class="font-semibold mb-1">Concentration</h4>
-                        <p class="text-sm text-[--muted]">Rolling average for the last <span id="config-avg-label">2</span> minutes.</p>
+                        <h4 class="font-semibold">Concentration Timeline</h4>
+                        <p class="text-xs text-[--muted]">Last <span id="config-history-label">60</span> min</p>
                     </div>
-                </div>
-
-                <div id="card-timeline" class="stat-card rounded-xl p-6 mb-6 relative">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h4 class="font-semibold">Concentration Timeline</h4>
-                            <p class="text-xs text-[--muted]">Last <span id="config-history-label">60</span> min</p>
-                        </div>
-                        <div class="flex items-center gap-2 relative">
-                            <span class="w-2 h-2 rounded-full bg-[--accent] animate-pulse-slow"></span>
-                            <span class="text-xs text-[--muted]">Live</span>
-                            <button id="btn-settings" class="ml-2 text-[--muted] hover:text-[--fg] transition-colors" title="Timeline Settings">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                </svg>
-                            </button>
-                            
-                            <div id="settings-menu" class="settings-menu">
-                                <h5 class="font-semibold text-sm mb-3 text-[--fg]">Timeline Settings</h5>
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-[--muted] block mb-1">Measurement Interval (sec)</label>
-                                        <input type="number" id="input-interval" value="10" min="5" max="60">
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-[--muted] block mb-1">Rolling Average Window (min)</label>
-                                        <input type="number" id="input-window" value="2" min="1" max="10">
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-[--muted] block mb-1">History Length (min)</label>
-                                        <input type="number" id="input-history" value="60" min="10" max="120">
-                                    </div>
-                                    <button id="btn-apply-settings" class="w-full btn-primary py-2 rounded-lg text-sm mt-2">Apply</button>
+                    <div class="flex items-center gap-2 relative">
+                        <span class="w-2 h-2 rounded-full bg-[--accent] animate-pulse-slow"></span>
+                        <span class="text-xs text-[--muted]">Live</span>
+                        <button id="btn-settings" class="ml-2 text-[--muted] hover:text-[--fg] transition-colors" title="Timeline Settings">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </button>
+                        <div id="settings-menu" class="settings-menu hidden">
+                            <h5 class="font-semibold text-sm mb-3 text-[--fg]">Timeline Settings</h5>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="text-xs text-[--muted] block mb-1">Measurement Interval (sec)</label>
+                                    <input type="number" id="input-interval" value="10" min="5" max="60">
                                 </div>
+                                <div>
+                                    <label class="text-xs text-[--muted] block mb-1">Rolling Average Window (min)</label>
+                                    <input type="number" id="input-window" value="2" min="1" max="10">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-[--muted] block mb-1">History Length (min)</label>
+                                    <input type="number" id="input-history" value="60" min="10" max="120">
+                                </div>
+                                <button id="btn-apply-settings" class="w-full btn-primary py-2 rounded-lg text-sm mt-2">Apply</button>
                             </div>
                         </div>
                     </div>
-                    <div class="h-48">
-                        <canvas id="concentration-chart"></canvas>
-                    </div>
                 </div>
+                <div class="h-48">
+                    <canvas id="concentration-chart"></canvas>
+                </div>
+            </div>
 
-                <div class="stat-card rounded-xl p-6">
-                    <h4 class="font-semibold mb-4">Session Details</h4>
-                    <div class="space-y-3 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-[--muted]">Documents Open</span>
-                            <span id="detail-docs" class="mono">0</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-[--muted]">Session Started</span>
-                            <span id="detail-start" class="mono">--:--:--</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-[--muted]">Pause Count</span>
-                            <span id="detail-pauses" class="mono">0</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-[--muted]">Avg. Pause Length</span>
-                            <span id="detail-pause-avg" class="mono">--:--</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-[--muted]">Avg. Concentration</span>
-                            <span id="detail-avg" class="mono">--%</span>
-                        </div>
+            <div class="stat-card rounded-xl p-6">
+                <h4 class="font-semibold mb-4">Session Details</h4>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-[--muted]">Documents Open</span>
+                        <span id="detail-docs" class="mono">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[--muted]">Session Started</span>
+                        <span id="detail-start" class="mono">--:--:--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[--muted]">Pause Count</span>
+                        <span id="detail-pauses" class="mono">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[--muted]">Avg. Pause Length</span>
+                        <span id="detail-pause-avg" class="mono">--:--</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[--muted]">Avg. Concentration</span>
+                        <span id="detail-avg" class="mono">--%</span>
                     </div>
                 </div>
             </div>
+
+            <!-- GitHub Link -->
+            <div class="mt-6 text-center">
+                <a href="https://github.com/phlaster/concdoc" target="_blank" rel="noopener noreferrer" 
+                   class="inline-flex items-center gap-2 text-sm text-[--muted] hover:text-[--fg] transition-colors group">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    <span>View on GitHub</span>
+                </a>
+            </div>
+
         </div>
     </div>
 
@@ -421,8 +493,8 @@
             updateInterval: null, 
             secondTimer: null, 
             scoreTimer: null,
-            pausePromptTimer: null, // Timer for the pause overlay text
-            pausePromptTimeout: null, // Timeout to show the pause overlay text
+            pausePromptTimer: null,
+            pausePromptTimeout: null,
             
             activeSeconds: 0, 
             diffScores: [], 
@@ -432,32 +504,30 @@
                 measureIntervalSec: 10,
                 avgWindowMin: 2,
                 historyMin: 60
-            }
+            },
+
+            isStatsLocked: true, 
+            isMobileDrawerOpen: false 
         };
 
         const documents = new Map();
         let activeTabId = null;
         let tabCounter = 0;
         let currentDoc = null;
-        
         let lastRenderedSecond = -1;
+
+        const LG_BREAKPOINT = 1024; 
+
+        function isDesktop() {
+            return window.innerWidth >= LG_BREAKPOINT;
+        }
 
         function createDocumentState(id, name) {
             return {
-                id: id,
-                name: name,
-                pdfDoc: null,
-                totalPages: 0,
-                isLoaded: false,
-                scrollTop: 0,
-                resumeScrollBaseline: 0,
-                currentPage: 1,
-                isDragging: false,
-                lastMouseY: 0,
-                pagesMeta: [],
-                totalHeight: 0,
-                renderedPages: new Map(),
-                avgPageHeight: 0
+                id: id, name: name, pdfDoc: null, totalPages: 0, isLoaded: false,
+                scrollTop: 0, resumeScrollBaseline: 0, currentPage: 1,
+                isDragging: false, lastMouseY: 0,
+                pagesMeta: [], totalHeight: 0, renderedPages: new Map(), avgPageHeight: 0
             };
         }
 
@@ -466,44 +536,29 @@
         // =====================
         const elements = {
             fileInput: document.getElementById('file-input'),
-            dropZone: document.getElementById('drop-zone'),
-            dropTarget: document.getElementById('drop-target'),
+            dropZone: document.getElementById('drop-zone'), dropTarget: document.getElementById('drop-target'),
             loadingOverlay: document.getElementById('loading-overlay'),
-            pdfContainer: document.getElementById('pdf-container'),
-            pdfPages: document.getElementById('pdf-pages'),
-            startBanner: document.getElementById('start-banner'),
-            pauseOverlay: document.getElementById('pause-overlay'),
-            pauseTimer: document.getElementById('pause-timer'), // New
-            btnAddTab: document.getElementById('btn-add-tab'),
-            btnStart: document.getElementById('btn-start'),
-            btnReset: document.getElementById('btn-reset'),
+            pdfWrapper: document.getElementById('pdf-wrapper'),
+            pdfContainer: document.getElementById('pdf-container'), pdfPages: document.getElementById('pdf-pages'),
+            startBanner: document.getElementById('start-banner'), pauseOverlay: document.getElementById('pause-overlay'), pauseTimer: document.getElementById('pause-timer'),
+            btnAddTab: document.getElementById('btn-add-tab'), btnStart: document.getElementById('btn-start'), btnReset: document.getElementById('btn-reset'),
             tabsContainer: document.getElementById('tabs-container'),
-            pageIndicator: document.getElementById('page-indicator'),
-            currentPageEl: document.getElementById('current-page'),
-            totalPagesEl: document.getElementById('total-pages'),
-            statusDot: document.getElementById('status-dot'),
-            statusText: document.getElementById('status-text'),
-            statusTime: document.getElementById('status-time'),
-            statElapsed: document.getElementById('stat-elapsed'),
-            statReading: document.getElementById('stat-reading'),
-            statPages: document.getElementById('stat-pages'),
-            statFocus: document.getElementById('stat-focus'),
-            focusBar: document.getElementById('focus-bar'),
-            ringPercentage: document.getElementById('ring-percentage'),
-            progressCircle: document.getElementById('progress-circle'),
-            detailDocs: document.getElementById('detail-docs'),
-            detailStart: document.getElementById('detail-start'),
-            detailPauses: document.getElementById('detail-pauses'),
-            detailPauseAvg: document.getElementById('detail-pause-avg'),
-            detailAvg: document.getElementById('detail-avg'),
-            btnSettings: document.getElementById('btn-settings'),
-            settingsMenu: document.getElementById('settings-menu'),
-            inputInterval: document.getElementById('input-interval'),
-            inputWindow: document.getElementById('input-window'),
-            inputHistory: document.getElementById('input-history'),
-            btnApply: document.getElementById('btn-apply-settings'),
-            configAvgLabel: document.getElementById('config-avg-label'),
-            configHistoryLabel: document.getElementById('config-history-label'),
+            pageIndicator: document.getElementById('page-indicator'), currentPageEl: document.getElementById('current-page'), totalPagesEl: document.getElementById('total-pages'),
+            statusDot: document.getElementById('status-dot'), statusText: document.getElementById('status-text'), statusTime: document.getElementById('status-time'),
+            statElapsed: document.getElementById('stat-elapsed'), statReading: document.getElementById('stat-reading'),
+            statPages: document.getElementById('stat-pages'), statFocus: document.getElementById('stat-focus'), focusBar: document.getElementById('focus-bar'),
+            ringPercentage: document.getElementById('ring-percentage'), progressCircle: document.getElementById('progress-circle'),
+            detailDocs: document.getElementById('detail-docs'), detailStart: document.getElementById('detail-start'),
+            detailPauses: document.getElementById('detail-pauses'), detailPauseAvg: document.getElementById('detail-pause-avg'), detailAvg: document.getElementById('detail-avg'),
+            btnSettings: document.getElementById('btn-settings'), settingsMenu: document.getElementById('settings-menu'),
+            inputInterval: document.getElementById('input-interval'), inputWindow: document.getElementById('input-window'), inputHistory: document.getElementById('input-history'),
+            btnApply: document.getElementById('btn-apply-settings'), configAvgLabel: document.getElementById('config-avg-label'), configHistoryLabel: document.getElementById('config-history-label'),
+            
+            statsPanel: document.getElementById('stats-panel'),
+            btnToggleMobile: document.getElementById('btn-toggle-mobile'),
+            btnToggleDesktop: document.getElementById('btn-toggle-desktop'),
+            iconLock: document.getElementById('icon-lock'),
+            iconUnlock: document.getElementById('icon-unlock')
         };
 
         // =====================
@@ -515,21 +570,14 @@
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'Concentration',
-                    data: [],
-                    borderColor: '#00d9a6',
-                    backgroundColor: 'rgba(0, 217, 166, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 0,
-                    borderWidth: 2,
+                    label: 'Concentration', data: [],
+                    borderColor: '#C4956A',
+                    backgroundColor: 'rgba(196, 149, 106, 0.1)',
+                    fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 0, borderWidth: 2,
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 300 },
+                responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
                 scales: {
                     x: { display: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6b7d', maxTicksLimit: 6, font: { family: 'JetBrains Mono', size: 10 } } },
                     y: { display: true, min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#5a6b7d', callback: val => val + '%', font: { family: 'JetBrains Mono', size: 10 } } }
@@ -549,28 +597,96 @@
             const seconds = totalSeconds % 60;
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
-
         function formatTimeShort(ms) {
             const totalSeconds = Math.floor(ms / 1000);
             const minutes = Math.floor(totalSeconds / 60);
             const seconds = totalSeconds % 60;
             return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
-
         function formatTimeClock(date) {
             return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         }
-
         function truncateFilename(name, maxLen = 20) {
             if (name.length <= maxLen) return name;
             const ext = name.slice(name.lastIndexOf('.'));
             const base = name.slice(0, name.lastIndexOf('.'));
             return base.slice(0, maxLen - ext.length - 3) + '...' + ext;
         }
-
         function updateStatus(text, colorClass) {
             elements.statusText.textContent = text;
             elements.statusDot.className = `w-3 h-3 rounded-full ${colorClass}`;
+        }
+
+        // =====================
+        // UI Layout Control
+        // =====================
+        function updateLayoutUI() {
+            const desktop = isDesktop();
+
+            if (desktop) {
+                elements.statsPanel.classList.remove('minimized'); 
+                
+                let statsVisible = false;
+
+                if (globalState.isStatsLocked) {
+                    statsVisible = true;
+                    elements.iconLock.classList.remove('hidden');
+                    elements.iconUnlock.classList.add('hidden');
+                } else {
+                    elements.iconLock.classList.add('hidden');
+                    elements.iconUnlock.classList.remove('hidden');
+                    
+                    if (globalState.isPaused || !globalState.isReading) {
+                        statsVisible = true;
+                    } else {
+                        statsVisible = false;
+                    }
+                }
+
+                if (statsVisible) {
+                    elements.statsPanel.classList.remove('hidden-desktop');
+                    elements.pdfWrapper.classList.add('stats-visible-desktop');
+                } else {
+                    elements.statsPanel.classList.add('hidden-desktop');
+                    elements.pdfWrapper.classList.remove('stats-visible-desktop');
+                }
+
+            } else {
+                elements.statsPanel.classList.remove('hidden-desktop'); 
+                elements.pdfWrapper.classList.remove('stats-visible-desktop'); 
+
+                if (globalState.isMobileDrawerOpen) {
+                    elements.statsPanel.classList.remove('minimized');
+                    elements.btnToggleMobile.querySelector('svg').style.transform = 'rotate(0deg)';
+                } else {
+                    elements.statsPanel.classList.add('minimized');
+                    elements.btnToggleMobile.querySelector('svg').style.transform = 'rotate(180deg)';
+                }
+            }
+        }
+
+        function setupLayoutControls() {
+            elements.btnToggleMobile.addEventListener('click', (e) => {
+                e.stopPropagation();
+                globalState.isMobileDrawerOpen = !globalState.isMobileDrawerOpen;
+                updateLayoutUI();
+            });
+
+            elements.statsPanel.querySelector('header').addEventListener('click', (e) => {
+                if (!isDesktop() && e.target.closest('#btn-reset')) return;
+                if (!isDesktop()) {
+                    globalState.isMobileDrawerOpen = !globalState.isMobileDrawerOpen;
+                    updateLayoutUI();
+                }
+            });
+
+            elements.btnToggleDesktop.addEventListener('click', (e) => {
+                e.stopPropagation();
+                globalState.isStatsLocked = !globalState.isStatsLocked;
+                updateLayoutUI();
+            });
+            
+            window.addEventListener('resize', updateLayoutUI);
         }
 
         // =====================
@@ -650,10 +766,7 @@
             const match = transform.match(/translateY\(-(\d+(?:\.\d+)?)px\)/);
             return match ? parseFloat(match[1]) : 0;
         }
-
-        function setScrollTop(val) {
-            elements.pdfPages.style.transform = `translateY(-${val}px)`;
-        }
+        function setScrollTop(val) { elements.pdfPages.style.transform = `translateY(-${val}px)`; }
 
         function showDropZone() {
             elements.dropZone.classList.remove('hidden');
@@ -662,7 +775,6 @@
             elements.startBanner.classList.add('hidden');
             elements.pageIndicator.classList.add('hidden');
         }
-
         function showLoading() {
             elements.dropZone.classList.add('hidden');
             elements.loadingOverlay.classList.remove('hidden');
@@ -675,10 +787,7 @@
         function clearRenderedPages(doc) {
             if (!doc) return;
             doc.renderedPages.forEach(entry => {
-                if (entry.canvas) {
-                    entry.canvas.width = 0;
-                    entry.canvas.height = 0;
-                }
+                if (entry.canvas) { entry.canvas.width = 0; entry.canvas.height = 0; }
             });
             doc.renderedPages.clear();
             elements.pdfPages.innerHTML = '';
@@ -689,8 +798,7 @@
             const containerHeight = elements.pdfContainer.clientHeight;
             const scrollTop = getScrollTop();
             const buffer = 1;
-            let firstVisible = -1;
-            let lastVisible = -1;
+            let firstVisible = -1, lastVisible = -1;
             const meta = currentDoc.pagesMeta;
             for (let i = 0; i < meta.length; i++) {
                 const p = meta[i];
@@ -817,6 +925,11 @@
             elements.detailStart.textContent = formatTimeClock(new Date());
             updateStatus('Reading', 'bg-[--accent] animate-pulse-slow');
             startTimers();
+
+            clearTimeout(globalState.slackTimer);
+            globalState.slackTimer = setTimeout(pauseSession, 5000);
+            
+            updateLayoutUI();
         }
 
         function pauseSession() {
@@ -830,14 +943,14 @@
             updateStatus('Paused', 'bg-[--warning]');
             elements.detailPauses.textContent = globalState.pauseCount;
 
-            // Show prompt after 5 seconds of full dimming
             clearTimeout(globalState.pausePromptTimeout);
             globalState.pausePromptTimeout = setTimeout(() => {
                 elements.pauseOverlay.classList.add('show-prompt');
-                // Start updating the pause timer text
                 clearInterval(globalState.pausePromptTimer);
-                updatePauseTimer(); // Immediate update
+                updatePauseTimer(); 
                 globalState.pausePromptTimer = setInterval(updatePauseTimer, 1000);
+                
+                updateLayoutUI();
             }, 5000);
         }
 
@@ -862,12 +975,14 @@
             if (currentDoc) currentDoc.resumeScrollBaseline = currentDoc.scrollTop;
             
             elements.pauseOverlay.classList.remove('active');
-            elements.pauseOverlay.classList.remove('show-prompt'); // Hide prompt
+            elements.pauseOverlay.classList.remove('show-prompt');
             
             clearTimeout(globalState.pausePromptTimeout);
             clearInterval(globalState.pausePromptTimer);
             
             updateStatus('Reading', 'bg-[--accent] animate-pulse-slow');
+            
+            updateLayoutUI();
         }
 
         function resetSession() {
@@ -912,6 +1027,8 @@
                 elements.startBanner.classList.remove('hidden');
                 updateStatus('Ready to start', 'bg-[--warning]');
             }
+            
+            updateLayoutUI();
         }
 
         // =====================
@@ -999,11 +1116,11 @@
         function setupSettings() {
             elements.btnSettings.addEventListener('click', (e) => {
                 e.stopPropagation();
-                elements.settingsMenu.classList.toggle('open');
+                elements.settingsMenu.classList.toggle('hidden');
             });
             document.addEventListener('click', (e) => {
                 if (!elements.settingsMenu.contains(e.target) && e.target !== elements.btnSettings) {
-                    elements.settingsMenu.classList.remove('open');
+                    elements.settingsMenu.classList.add('hidden');
                 }
             });
             elements.btnApply.addEventListener('click', (e) => {
@@ -1023,7 +1140,7 @@
                     concentrationChart.data.datasets[0].data = [];
                     concentrationChart.update();
                     if (globalState.sessionStartTime) startScoreTimer();
-                    elements.settingsMenu.classList.remove('open');
+                    elements.settingsMenu.classList.add('hidden');
                 }
             });
         }
@@ -1100,22 +1217,21 @@
         }
 
         // =====================
-        // Event Bindings
+        // Initialize
         // =====================
         function bindEvents() {
             elements.btnStart.addEventListener('click', startSession);
             elements.btnReset.addEventListener('click', resetSession);
         }
 
-        // =====================
-        // Initialize
-        // =====================
         function init() {
             setupDragDrop();
             setupScrollHandling();
             setupSettings();
+            setupLayoutControls();
             bindEvents();
             updateStatus('Waiting for document', 'bg-[--muted]');
+            updateLayoutUI();
         }
 
         init();
