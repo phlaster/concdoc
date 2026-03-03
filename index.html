@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,14 +10,16 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg: #0a0f14;
             --bg-elevated: #111920;
             --fg: #e8eff6;
             --muted: #5a6b7d;
-            --accent: #C4956A; /* Updated Brown */
+            --accent: #C4956A;
             --accent-dim: rgba(196, 149, 106, 0.15);
             --card: #161f28;
             --border: #243040;
@@ -24,7 +27,9 @@
             --error: #ff6b6b;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Space Grotesk', sans-serif;
@@ -35,58 +40,167 @@
             width: 100vw;
         }
 
-        .mono { font-family: 'JetBrains Mono', monospace; }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-elevated); }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-elevated);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--muted);
+        }
 
         .bg-pattern {
-            background-image: 
+            background-image:
                 radial-gradient(circle at 20% 80%, rgba(196, 149, 106, 0.03) 0%, transparent 50%),
                 radial-gradient(circle at 80% 20%, rgba(196, 149, 106, 0.02) 0%, transparent 40%),
                 linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 100%);
         }
 
         .grid-overlay {
-            background-image: 
-                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
             background-size: 40px 40px;
         }
 
         /* Animations */
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        @keyframes borderGlow { 0%, 100% { box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(196, 149, 106, 0.1); } 50% { box-shadow: 0 0 0 1px var(--accent), 0 0 30px rgba(196, 149, 106, 0.2); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
 
-        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
-        .animate-pulse-slow { animation: pulse 2s ease-in-out infinite; }
-        .animate-glow { animation: borderGlow 2s ease-in-out infinite; }
-        .animate-spin { animation: spin 1s linear infinite; }
+            to {
+                opacity: 1;
+            }
+        }
 
-        .stagger-children > * { opacity: 0; animation: slideUp 0.5s ease-out forwards; }
-        .stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
-        .stagger-children > *:nth-child(2) { animation-delay: 0.15s; }
-        .stagger-children > *:nth-child(3) { animation-delay: 0.2s; }
-        .stagger-children > *:nth-child(4) { animation-delay: 0.25s; }
-        .stagger-children > *:nth-child(5) { animation-delay: 0.3s; }
-        .stagger-children > *:nth-child(6) { animation-delay: 0.35s; }
-        .stagger-children > *:nth-child(7) { animation-delay: 0.4s; }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
 
-        #pdf-container { cursor: grab; user-select: none; }
-        #pdf-container.dragging { cursor: grabbing; }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        @keyframes borderGlow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 1px var(--accent), 0 0 20px rgba(196, 149, 106, 0.1);
+            }
+
+            50% {
+                box-shadow: 0 0 0 1px var(--accent), 0 0 30px rgba(196, 149, 106, 0.2);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.5s ease-out forwards;
+        }
+
+        .animate-pulse-slow {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .animate-glow {
+            animation: borderGlow 2s ease-in-out infinite;
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        .stagger-children>* {
+            opacity: 0;
+            animation: slideUp 0.5s ease-out forwards;
+        }
+
+        .stagger-children>*:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .stagger-children>*:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .stagger-children>*:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .stagger-children>*:nth-child(4) {
+            animation-delay: 0.25s;
+        }
+
+        .stagger-children>*:nth-child(5) {
+            animation-delay: 0.3s;
+        }
+
+        .stagger-children>*:nth-child(6) {
+            animation-delay: 0.35s;
+        }
+
+        .stagger-children>*:nth-child(7) {
+            animation-delay: 0.4s;
+        }
+
+        #pdf-container {
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+
+        #pdf-container.dragging {
+            cursor: grabbing;
+        }
 
         .stat-card {
             background: var(--card);
             border: 1px solid var(--border);
             transition: border-color 0.2s ease, background-color 0.2s ease;
         }
-        .stat-card:hover { border-color: rgba(196, 149, 106, 0.3); }
+
+        .stat-card:hover {
+            border-color: rgba(196, 149, 106, 0.3);
+        }
 
         .btn-primary {
             background: var(--accent);
@@ -94,11 +208,15 @@
             font-weight: 600;
             transition: all 0.2s ease;
         }
+
         .btn-primary:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 20px rgba(196, 149, 106, 0.3);
         }
-        .btn-primary:active { transform: translateY(0); }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
 
         .btn-secondary {
             background: transparent;
@@ -106,6 +224,7 @@
             color: var(--fg);
             transition: all 0.2s ease;
         }
+
         .btn-secondary:hover {
             border-color: var(--muted);
             background: var(--bg-elevated);
@@ -115,8 +234,10 @@
 
         #pdf-wrapper {
             position: absolute;
-            top: 0; left: 0; bottom: 0;
-            right: 0; 
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
             z-index: 1;
             display: flex;
             flex-direction: column;
@@ -130,22 +251,27 @@
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
-            box-shadow: -5px 0 20px rgba(0,0,0,0.3);
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.3);
         }
 
         /* Mobile Mode (< lg) */
         @media (max-width: 1023px) {
-            #pdf-wrapper { right: 0 !important; }
-            
+            #pdf-wrapper {
+                right: 0 !important;
+            }
+
             #stats-panel {
-                bottom: 0; left: 0; right: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
                 top: auto;
                 width: 100%;
-                height: 85vh; 
+                height: 85vh;
                 border-radius: 16px 16px 0 0;
                 border-top: 1px solid var(--border);
                 transform: translateY(0);
             }
+
             #stats-panel.minimized {
                 transform: translateY(calc(100% - 48px));
             }
@@ -157,9 +283,14 @@
             #page-indicator {
                 bottom: 4rem;
             }
-            
-            #btn-toggle-mobile { display: flex !important; }
-            #btn-toggle-desktop { display: none !important; }
+
+            #btn-toggle-mobile {
+                display: flex !important;
+            }
+
+            #btn-toggle-desktop {
+                display: none !important;
+            }
         }
 
         /* Desktop Mode (>= lg) */
@@ -169,20 +300,27 @@
             }
 
             #stats-panel {
-                top: 0; right: 0; bottom: 0;
+                top: 0;
+                right: 0;
+                bottom: 0;
                 left: auto;
                 width: 50%;
                 border-left: 1px solid var(--border);
                 border-radius: 0;
                 transform: translateX(0);
             }
-            
+
             #stats-panel.hidden-desktop {
                 transform: translateX(100%);
             }
-            
-            #btn-toggle-mobile { display: none !important; }
-            #btn-toggle-desktop { display: flex !important; }
+
+            #btn-toggle-mobile {
+                display: none !important;
+            }
+
+            #btn-toggle-desktop {
+                display: flex !important;
+            }
         }
 
         #pause-overlay {
@@ -199,10 +337,24 @@
             align-items: center;
             justify-content: center;
         }
+
         #pause-overlay.active {
             opacity: 1;
             backdrop-filter: blur(6px);
             pointer-events: auto;
+        }
+
+        /* Transparent Mode for "No Documents" state */
+        #pause-overlay.transparent {
+            background: transparent;
+            backdrop-filter: none;
+            pointer-events: none;
+            /* Pass clicks to drop zone */
+        }
+
+        /* Shift timer up to sit above the drop box */
+        #pause-overlay.transparent #pause-prompt {
+            transform: translateY(-200px);
         }
 
         #pause-prompt {
@@ -212,18 +364,23 @@
             text-align: center;
             pointer-events: none;
         }
+
         #pause-overlay.show-prompt #pause-prompt {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(200px);
         }
 
-        #pdf-pages { position: relative; width: 100%; }
-        .pdf-page-canvas { 
-            display: block; 
-            margin: 0 auto 10px auto; 
+        #pdf-pages {
+            position: relative;
+            width: 100%;
+        }
+
+        .pdf-page-canvas {
+            display: block;
+            margin: 0 auto 10px auto;
             position: absolute;
-            left: 0;
-            right: 0;
+            left: 50%;
+            transform: translateX(-50%);
         }
 
         .header-control-btn {
@@ -235,10 +392,16 @@
             align-items: center;
             justify-content: center;
         }
-        .header-control-btn:hover { background: var(--bg); }
+
+        .header-control-btn:hover {
+            background: var(--bg);
+        }
 
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
+
+            *,
+            *::before,
+            *::after {
                 animation-duration: 0.01ms !important;
                 animation-iteration-count: 1 !important;
                 transition-duration: 0.01ms !important;
@@ -246,6 +409,7 @@
         }
     </style>
 </head>
+
 <body class="bg-pattern">
 
     <!-- PDF WRAPPER (Layer 1) -->
@@ -253,9 +417,12 @@
         <!-- Tabs Header -->
         <div class="flex-shrink-0 bg-[--bg-elevated]/80 backdrop-blur-sm border-b border-[--border]">
             <div class="flex items-end h-12 px-2" id="tabs-container">
-                <button id="btn-add-tab" class="flex-shrink-0 px-3 py-2 text-[--muted] hover:text-[--fg] hover:bg-[--bg] rounded-t-lg transition-all" title="Add document">
+                <button id="btn-add-tab"
+                    class="flex-shrink-0 px-3 py-2 text-[--muted] hover:text-[--fg] hover:bg-[--bg] rounded-t-lg transition-all"
+                    title="Add document">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                 </button>
                 <input type="file" id="file-input" accept=".pdf" class="hidden" multiple>
@@ -265,10 +432,12 @@
         <!-- Viewport -->
         <div id="pdf-viewport" class="flex-1 relative overflow-hidden bg-[--bg]">
             <div id="drop-zone" class="absolute inset-0 flex items-center justify-center z-10 pt-12">
-                <div class="text-center p-12 border-2 border-dashed border-[--border] rounded-2xl max-w-md transition-all duration-300 hover:border-[--accent] hover:bg-[--accent-dim] cursor-pointer" id="drop-target">
+                <div class="text-center p-12 border-2 border-dashed border-[--border] rounded-2xl max-w-md transition-all duration-300 hover:border-[--accent] hover:bg-[--accent-dim] cursor-pointer"
+                    id="drop-target">
                     <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-[--card] flex items-center justify-center">
                         <svg class="w-8 h-8 text-[--muted]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                     </div>
                     <h3 class="text-xl font-semibold mb-2">Drop your PDF here</h3>
@@ -276,9 +445,12 @@
                 </div>
             </div>
 
-            <div id="loading-overlay" class="absolute inset-0 bg-[rgba(10,15,20,0.9)] flex items-center justify-center z-15 hidden pt-12">
+            <div id="loading-overlay"
+                class="absolute inset-0 bg-[rgba(10,15,20,0.9)] flex items-center justify-center z-15 hidden pt-12">
                 <div class="text-center">
-                    <div class="w-16 h-16 mx-auto mb-4 border-4 border-[--border] border-t-[--accent] rounded-full animate-spin"></div>
+                    <div
+                        class="w-16 h-16 mx-auto mb-4 border-4 border-[--border] border-t-[--accent] rounded-full animate-spin">
+                    </div>
                     <p class="text-[--muted]">Loading document...</p>
                 </div>
             </div>
@@ -291,15 +463,20 @@
             <div id="pause-overlay" class="pt-12">
                 <div id="pause-prompt">
                     <p id="pause-timer" class="mono text-4xl text-[--fg] opacity-80 mb-2">00:00</p>
-                    <p class="text-base text-[--fg] opacity-80">Paused. Click or drag to continue reading.</p>
+                    <p id="pause-desc" class="text-base text-[--fg] opacity-80">Paused. Click or drag to continue
+                        reading.</p>
                 </div>
             </div>
 
-            <div id="start-banner" class="absolute inset-0 bg-[rgba(10,15,20,0.85)] backdrop-blur-sm flex items-center justify-center z-20 hidden pt-12">
-                <button id="btn-start" class="group bg-[--card] border border-[--accent] rounded-2xl p-8 text-center animate-glow hover:scale-105 transition-transform">
-                    <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-[--accent-dim] flex items-center justify-center group-hover:bg-[--accent] transition-colors">
-                        <svg class="w-10 h-10 text-[--accent] group-hover:text-[--bg] transition-colors" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z"/>
+            <div id="start-banner"
+                class="absolute inset-0 bg-[rgba(10,15,20,0.85)] backdrop-blur-sm flex items-center justify-center z-20 hidden pt-12">
+                <button id="btn-start"
+                    class="group bg-[--card] border border-[--accent] rounded-2xl p-8 text-center animate-glow hover:scale-105 transition-transform">
+                    <div
+                        class="w-20 h-20 mx-auto mb-4 rounded-full bg-[--accent-dim] flex items-center justify-center group-hover:bg-[--accent] transition-colors">
+                        <svg class="w-10 h-10 text-[--accent] group-hover:text-[--bg] transition-colors"
+                            fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
                         </svg>
                     </div>
                     <h3 class="text-2xl font-semibold mb-2">Ready to Focus</h3>
@@ -307,7 +484,8 @@
                 </button>
             </div>
 
-            <div id="page-indicator" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-[--bg-elevated] border border-[--border] rounded-full px-4 py-2 mono text-sm hidden">
+            <div id="page-indicator"
+                class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-[--bg-elevated] border border-[--border] rounded-full px-4 py-2 mono text-sm hidden">
                 Page <span id="current-page">1</span> of <span id="total-pages">1</span>
             </div>
         </div>
@@ -315,22 +493,29 @@
 
     <!-- STATS PANEL (Layer 2) -->
     <div id="stats-panel" class="minimized">
-        <header class="flex-shrink-0 px-6 py-4 border-b border-[--border] flex items-center justify-between cursor-pointer" id="stats-header">
+        <header
+            class="flex-shrink-0 px-6 py-4 border-b border-[--border] flex items-center justify-between cursor-pointer"
+            id="stats-header">
             <div class="flex items-center">
                 <!-- Mobile Toggle (Chevron) -->
                 <button id="btn-toggle-mobile" class="header-control-btn" title="Toggle Stats">
-                    <svg class="w-5 h-5 text-[--muted] transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    <svg class="w-5 h-5 text-[--muted] transition-transform" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
                 </button>
-                
+
                 <!-- Desktop Toggle (Lock) -->
                 <button id="btn-toggle-desktop" class="header-control-btn" title="Lock/Unlock Stats Panel">
-                    <svg id="icon-lock" class="w-5 h-5 text-[--accent]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    <svg id="icon-lock" class="w-5 h-5 text-[--accent]" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
-                    <svg id="icon-unlock" class="w-5 h-5 text-[--muted] hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                    <svg id="icon-unlock" class="w-5 h-5 text-[--muted] hidden" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                     </svg>
                 </button>
 
@@ -340,7 +525,8 @@
             </div>
             <button id="btn-reset" class="btn-secondary px-4 py-2 rounded-lg text-sm flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 Reset
             </button>
@@ -373,16 +559,17 @@
                     <p class="text-[--muted] text-sm mb-1">Focus Score</p>
                     <p id="stat-focus" class="mono text-3xl font-medium text-[--fg]">0%</p>
                     <p class="text-xs text-[--muted] mt-1">Lifetime average</p>
-                    <div id="focus-bar" class="absolute bottom-0 left-0 h-1 bg-[--accent] transition-all duration-500" style="width: 0%"></div>
+                    <div id="focus-bar" class="absolute bottom-0 left-0 h-1 bg-[--accent] transition-all duration-500"
+                        style="width: 0%"></div>
                 </div>
             </div>
 
             <div id="card-concentration" class="stat-card rounded-xl p-6 mb-6 flex items-center gap-6">
                 <div class="relative flex-shrink-0">
                     <svg class="progress-ring w-24 h-24 -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="42" stroke="var(--border)" stroke-width="8" fill="none"/>
-                        <circle id="progress-circle" cx="50" cy="50" r="42" stroke="var(--accent)" stroke-width="8" fill="none" 
-                                stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round"/>
+                        <circle cx="50" cy="50" r="42" stroke="var(--border)" stroke-width="8" fill="none" />
+                        <circle id="progress-circle" cx="50" cy="50" r="42" stroke="var(--accent)" stroke-width="8"
+                            fill="none" stroke-dasharray="264" stroke-dashoffset="264" stroke-linecap="round" />
                     </svg>
                     <div class="absolute inset-0 flex items-center justify-center">
                         <span id="ring-percentage" class="mono text-xl font-semibold">0%</span>
@@ -390,7 +577,8 @@
                 </div>
                 <div>
                     <h4 class="font-semibold mb-1">Concentration</h4>
-                    <p class="text-sm text-[--muted]">Rolling average for the last <span id="config-avg-label">2</span> minutes.</p>
+                    <p class="text-sm text-[--muted]">Rolling average for the last <span id="config-avg-label">2</span>
+                        minutes.</p>
                 </div>
             </div>
 
@@ -403,10 +591,13 @@
                     <div class="flex items-center gap-2 relative">
                         <span class="w-2 h-2 rounded-full bg-[--accent] animate-pulse-slow"></span>
                         <span class="text-xs text-[--muted]">Live</span>
-                        <button id="btn-settings" class="ml-2 text-[--muted] hover:text-[--fg] transition-colors" title="Timeline Settings">
+                        <button id="btn-settings" class="ml-2 text-[--muted] hover:text-[--fg] transition-colors"
+                            title="Timeline Settings">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </button>
                         <div id="settings-menu" class="settings-menu hidden">
@@ -417,14 +608,16 @@
                                     <input type="number" id="input-interval" value="10" min="5" max="60">
                                 </div>
                                 <div>
-                                    <label class="text-xs text-[--muted] block mb-1">Rolling Average Window (min)</label>
+                                    <label class="text-xs text-[--muted] block mb-1">Rolling Average Window
+                                        (min)</label>
                                     <input type="number" id="input-window" value="2" min="1" max="10">
                                 </div>
                                 <div>
                                     <label class="text-xs text-[--muted] block mb-1">History Length (min)</label>
                                     <input type="number" id="input-history" value="60" min="10" max="120">
                                 </div>
-                                <button id="btn-apply-settings" class="w-full btn-primary py-2 rounded-lg text-sm mt-2">Apply</button>
+                                <button id="btn-apply-settings"
+                                    class="w-full btn-primary py-2 rounded-lg text-sm mt-2">Apply</button>
                             </div>
                         </div>
                     </div>
@@ -462,10 +655,11 @@
 
             <!-- GitHub Link -->
             <div class="mt-6 text-center">
-                <a href="https://github.com/phlaster/concdoc" target="_blank" rel="noopener noreferrer" 
-                   class="inline-flex items-center gap-2 text-sm text-[--muted] hover:text-[--fg] transition-colors group">
+                <a href="https://github.com/phlaster/concdoc" target="_blank" rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 text-sm text-[--muted] hover:text-[--fg] transition-colors group">
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        <path
+                            d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                     </svg>
                     <span>View on GitHub</span>
                 </a>
@@ -490,24 +684,25 @@
             totalPauseDuration: 0,
             currentPauseStart: null,
             slackTimer: null,
-            updateInterval: null, 
-            secondTimer: null, 
+            updateInterval: null,
+            secondTimer: null,
             scoreTimer: null,
             pausePromptTimer: null,
             pausePromptTimeout: null,
-            
-            activeSeconds: 0, 
-            diffScores: [], 
-            timelineData: [], 
-            
+
+            activeSeconds: 0,
+            diffScores: [],
+            timelineData: [],
+
             config: {
                 measureIntervalSec: 10,
                 avgWindowMin: 2,
                 historyMin: 60
             },
 
-            isStatsLocked: true, 
-            isMobileDrawerOpen: false 
+            isStatsLocked: true,
+            isMobileDrawerOpen: false,
+            lastContainerWidth: 0
         };
 
         const documents = new Map();
@@ -516,7 +711,7 @@
         let currentDoc = null;
         let lastRenderedSecond = -1;
 
-        const LG_BREAKPOINT = 1024; 
+        const LG_BREAKPOINT = 1024;
 
         function isDesktop() {
             return window.innerWidth >= LG_BREAKPOINT;
@@ -527,7 +722,8 @@
                 id: id, name: name, pdfDoc: null, totalPages: 0, isLoaded: false,
                 scrollTop: 0, resumeScrollBaseline: 0, currentPage: 1,
                 isDragging: false, lastMouseY: 0,
-                pagesMeta: [], totalHeight: 0, renderedPages: new Map(), avgPageHeight: 0
+                pagesMeta: [], totalHeight: 0, renderedPages: new Map(), avgPageHeight: 0, scale: 1,
+                rawPagesMeta: [] // Store unscaled dimensions
             };
         }
 
@@ -540,7 +736,7 @@
             loadingOverlay: document.getElementById('loading-overlay'),
             pdfWrapper: document.getElementById('pdf-wrapper'),
             pdfContainer: document.getElementById('pdf-container'), pdfPages: document.getElementById('pdf-pages'),
-            startBanner: document.getElementById('start-banner'), pauseOverlay: document.getElementById('pause-overlay'), pauseTimer: document.getElementById('pause-timer'),
+            startBanner: document.getElementById('start-banner'), pauseOverlay: document.getElementById('pause-overlay'), pauseTimer: document.getElementById('pause-timer'), pauseDesc: document.getElementById('pause-desc'),
             btnAddTab: document.getElementById('btn-add-tab'), btnStart: document.getElementById('btn-start'), btnReset: document.getElementById('btn-reset'),
             tabsContainer: document.getElementById('tabs-container'),
             pageIndicator: document.getElementById('page-indicator'), currentPageEl: document.getElementById('current-page'), totalPagesEl: document.getElementById('total-pages'),
@@ -553,7 +749,7 @@
             btnSettings: document.getElementById('btn-settings'), settingsMenu: document.getElementById('settings-menu'),
             inputInterval: document.getElementById('input-interval'), inputWindow: document.getElementById('input-window'), inputHistory: document.getElementById('input-history'),
             btnApply: document.getElementById('btn-apply-settings'), configAvgLabel: document.getElementById('config-avg-label'), configHistoryLabel: document.getElementById('config-history-label'),
-            
+
             statsPanel: document.getElementById('stats-panel'),
             btnToggleMobile: document.getElementById('btn-toggle-mobile'),
             btnToggleDesktop: document.getElementById('btn-toggle-desktop'),
@@ -624,8 +820,8 @@
             const desktop = isDesktop();
 
             if (desktop) {
-                elements.statsPanel.classList.remove('minimized'); 
-                
+                elements.statsPanel.classList.remove('minimized');
+
                 let statsVisible = false;
 
                 if (globalState.isStatsLocked) {
@@ -635,7 +831,7 @@
                 } else {
                     elements.iconLock.classList.add('hidden');
                     elements.iconUnlock.classList.remove('hidden');
-                    
+
                     if (globalState.isPaused || !globalState.isReading) {
                         statsVisible = true;
                     } else {
@@ -652,8 +848,8 @@
                 }
 
             } else {
-                elements.statsPanel.classList.remove('hidden-desktop'); 
-                elements.pdfWrapper.classList.remove('stats-visible-desktop'); 
+                elements.statsPanel.classList.remove('hidden-desktop');
+                elements.pdfWrapper.classList.remove('stats-visible-desktop');
 
                 if (globalState.isMobileDrawerOpen) {
                     elements.statsPanel.classList.remove('minimized');
@@ -685,7 +881,7 @@
                 globalState.isStatsLocked = !globalState.isStatsLocked;
                 updateLayoutUI();
             });
-            
+
             window.addEventListener('resize', updateLayoutUI);
         }
 
@@ -716,7 +912,7 @@
             if (!documents.has(id)) return;
             if (currentDoc && currentDoc.isLoaded) {
                 currentDoc.scrollTop = getScrollTop();
-                clearRenderedPages(currentDoc); 
+                clearRenderedPages(currentDoc);
             }
             activeTabId = id;
             currentDoc = documents.get(id);
@@ -734,7 +930,20 @@
             if (activeTabId === id) {
                 const remainingIds = Array.from(documents.keys());
                 if (remainingIds.length > 0) switchToTab(remainingIds[0]);
-                else { activeTabId = null; currentDoc = null; showDropZone(); }
+                else {
+                    activeTabId = null;
+                    currentDoc = null;
+                    showDropZone();
+
+                    if (globalState.sessionStartTime) {
+                        pauseSession();
+                        // Special UI for "No Documents" paused state
+                        elements.pauseOverlay.classList.add('transparent');
+                        elements.pauseOverlay.classList.add('show-prompt'); // Show timer immediately
+                        elements.pauseDesc.textContent = "Paused"; // Set text to just "Paused"
+                        elements.pauseDesc.style.display = 'block'; // Ensure it is visible
+                    }
+                }
             }
             elements.detailDocs.textContent = documents.size;
         }
@@ -745,13 +954,9 @@
             elements.loadingOverlay.classList.add('hidden');
             elements.pdfContainer.classList.remove('hidden');
             elements.pageIndicator.classList.remove('hidden');
-            elements.pdfPages.style.height = currentDoc.totalHeight + 'px';
-            elements.pdfPages.innerHTML = ''; 
-            currentDoc.renderedPages.clear();
-            setScrollTop(currentDoc.scrollTop);
-            renderVisiblePages();
-            elements.totalPagesEl.textContent = currentDoc.totalPages;
-            elements.currentPageEl.textContent = currentDoc.currentPage;
+
+            fitToWidth();
+
             if (globalState.sessionStartTime && globalState.isPaused) {
                 elements.startBanner.classList.add('hidden');
             } else if (globalState.sessionStartTime) {
@@ -837,7 +1042,7 @@
             if (!currentDoc) return;
             try {
                 const page = await currentDoc.pdfDoc.getPage(pageIndex + 1);
-                const viewport = page.getViewport({ scale: 1.5 });
+                const viewport = page.getViewport({ scale: currentDoc.scale });
                 if (!currentDoc || !currentDoc.renderedPages) return;
                 currentDoc.renderedPages.set(pageIndex, { canvas });
                 canvas.width = viewport.width;
@@ -859,27 +1064,98 @@
                 const docState = createDocumentState(id, file.name);
                 docState.pdfDoc = pdfDoc;
                 docState.totalPages = pdfDoc.numPages;
-                let totalH = 0;
+
+                // --- Pre-calculate Raw Dimensions ---
+                let totalRawHeight = 0;
                 for (let i = 1; i <= docState.totalPages; i++) {
                     const page = await pdfDoc.getPage(i);
-                    const viewport = page.getViewport({ scale: 1.5 });
-                    docState.pagesMeta.push({ width: viewport.width, height: viewport.height, top: totalH });
-                    totalH += viewport.height;
+                    const viewport = page.getViewport({ scale: 1 });
+                    docState.rawPagesMeta.push({ width: viewport.width, height: viewport.height, top: totalRawHeight });
+                    totalRawHeight += viewport.height;
                 }
-                docState.totalHeight = totalH;
-                if (docState.pagesMeta.length > 0) docState.avgPageHeight = totalH / docState.pagesMeta.length;
+                docState.rawTotalHeight = totalRawHeight;
+
                 docState.isLoaded = true;
                 documents.set(id, docState);
                 const tab = createTab(id, file.name);
                 elements.tabsContainer.insertBefore(tab, elements.btnAddTab);
                 switchToTab(id);
                 elements.detailDocs.textContent = documents.size;
+
+                // Reset pause overlay state if coming from "no docs" state
+                elements.pauseOverlay.classList.remove('transparent');
+                elements.pauseDesc.textContent = "Paused. Click or drag to continue reading.";
+                elements.pauseDesc.style.display = 'block';
+
                 updateStatus('Ready to start', 'bg-[--warning]');
             } catch (error) {
                 console.error('Failed to load PDF:', error);
                 showDropZone();
                 updateStatus('Failed to load PDF', 'bg-[--error]');
             }
+        }
+
+        // =====================
+        // Resize & Fitting Logic
+        // =====================
+        function fitToWidth() {
+            if (!currentDoc || !currentDoc.isLoaded) return;
+
+            const containerWidth = elements.pdfContainer.clientWidth;
+
+            // If container is not visible yet, try using wrapper width (fallback)
+            const width = containerWidth > 0 ? containerWidth : elements.pdfWrapper.clientWidth;
+
+            if (width <= 0) return; // Safety check
+
+            // Find widest page in raw metadata
+            const maxRawWidth = Math.max(...currentDoc.rawPagesMeta.map(p => p.width));
+
+            // Calculate scale (with padding)
+            const scale = (width - 20) / maxRawWidth;
+
+            // If scale hasn't changed significantly, don't re-render
+            if (Math.abs(scale - currentDoc.scale) < 0.001) return;
+
+            currentDoc.scale = scale;
+
+            // Recalculate pagesMeta
+            let totalH = 0;
+            currentDoc.pagesMeta = [];
+            currentDoc.rawPagesMeta.forEach(p => {
+                currentDoc.pagesMeta.push({
+                    width: p.width * scale,
+                    height: p.height * scale,
+                    top: totalH
+                });
+                totalH += p.height * scale;
+            });
+            currentDoc.totalHeight = totalH;
+            currentDoc.avgPageHeight = totalH / currentDoc.totalPages;
+
+            // Update DOM
+            elements.pdfPages.style.height = currentDoc.totalHeight + 'px';
+            clearRenderedPages(currentDoc);
+            setScrollTop(currentDoc.scrollTop);
+            renderVisiblePages();
+
+            elements.totalPagesEl.textContent = currentDoc.totalPages;
+            elements.currentPageEl.textContent = currentDoc.currentPage;
+
+            globalState.lastContainerWidth = width;
+        }
+
+        function setupResizeObserver() {
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    const width = entry.contentRect.width;
+                    if (Math.abs(width - globalState.lastContainerWidth) > 1) {
+                        fitToWidth();
+                    }
+                }
+            });
+
+            resizeObserver.observe(elements.pdfContainer);
         }
 
         // =====================
@@ -919,7 +1195,7 @@
             globalState.activeSeconds = 0;
             globalState.diffScores = [];
             globalState.timelineData = [];
-            
+
             documents.forEach(doc => doc.resumeScrollBaseline = doc.scrollTop);
             elements.startBanner.classList.add('hidden');
             elements.detailStart.textContent = formatTimeClock(new Date());
@@ -928,7 +1204,7 @@
 
             clearTimeout(globalState.slackTimer);
             globalState.slackTimer = setTimeout(pauseSession, 5000);
-            
+
             updateLayoutUI();
         }
 
@@ -938,7 +1214,7 @@
             globalState.isReading = false;
             globalState.pauseCount++;
             globalState.currentPauseStart = Date.now();
-            
+
             elements.pauseOverlay.classList.add('active');
             updateStatus('Paused', 'bg-[--warning]');
             elements.detailPauses.textContent = globalState.pauseCount;
@@ -947,9 +1223,9 @@
             globalState.pausePromptTimeout = setTimeout(() => {
                 elements.pauseOverlay.classList.add('show-prompt');
                 clearInterval(globalState.pausePromptTimer);
-                updatePauseTimer(); 
+                updatePauseTimer();
                 globalState.pausePromptTimer = setInterval(updatePauseTimer, 1000);
-                
+
                 updateLayoutUI();
             }, 5000);
         }
@@ -961,10 +1237,12 @@
         }
 
         function resumeSession() {
+            if (documents.size === 0) return; // Cannot resume without documents
+
             globalState.isPaused = false;
             globalState.isReading = true;
             globalState.lastActionTime = Date.now();
-            
+
             if (globalState.currentPauseStart) {
                 const pauseDuration = Date.now() - globalState.currentPauseStart;
                 globalState.totalPauseDuration += pauseDuration;
@@ -973,15 +1251,20 @@
                 elements.detailPauseAvg.textContent = formatTimeShort(avgPause);
             }
             if (currentDoc) currentDoc.resumeScrollBaseline = currentDoc.scrollTop;
-            
+
             elements.pauseOverlay.classList.remove('active');
             elements.pauseOverlay.classList.remove('show-prompt');
-            
+            elements.pauseOverlay.classList.remove('transparent');
+
+            // Reset text to default
+            elements.pauseDesc.textContent = "Paused. Click or drag to continue reading.";
+            elements.pauseDesc.style.display = 'block';
+
             clearTimeout(globalState.pausePromptTimeout);
             clearInterval(globalState.pausePromptTimer);
-            
+
             updateStatus('Reading', 'bg-[--accent] animate-pulse-slow');
-            
+
             updateLayoutUI();
         }
 
@@ -998,12 +1281,12 @@
             globalState.diffScores = [];
             globalState.timelineData = [];
             lastRenderedSecond = -1;
-            
+
             documents.forEach(doc => doc.resumeScrollBaseline = 0);
             concentrationChart.data.labels = [];
             concentrationChart.data.datasets[0].data = [];
             concentrationChart.update();
-            
+
             elements.statElapsed.textContent = '00:00:00';
             elements.statReading.textContent = '00:00:00';
             elements.statPages.textContent = '0';
@@ -1011,23 +1294,27 @@
             elements.focusBar.style.width = '0%';
             elements.ringPercentage.textContent = '0%';
             elements.progressCircle.style.strokeDashoffset = 264;
-            
+
             elements.detailStart.textContent = '--:--:--';
             elements.detailPauses.textContent = '0';
             elements.detailPauseAvg.textContent = '--:--';
             elements.detailAvg.textContent = '--%';
             elements.statusTime.textContent = '--:--';
-            
+
             elements.pauseOverlay.classList.remove('active');
             elements.pauseOverlay.classList.remove('show-prompt');
+            elements.pauseOverlay.classList.remove('transparent');
+            elements.pauseDesc.textContent = "Paused. Click or drag to continue reading.";
+            elements.pauseDesc.style.display = 'block';
+
             clearTimeout(globalState.pausePromptTimeout);
             clearInterval(globalState.pausePromptTimer);
-            
+
             if (documents.size > 0) {
                 elements.startBanner.classList.remove('hidden');
                 updateStatus('Ready to start', 'bg-[--warning]');
             }
-            
+
             updateLayoutUI();
         }
 
@@ -1146,55 +1433,89 @@
         }
 
         // =====================
-        // Scroll Handling
+        // Scroll Handling (Mouse & Touch)
         // =====================
         function setupScrollHandling() {
             const container = elements.pdfContainer;
             const overlay = elements.pauseOverlay;
 
-            container.addEventListener('mousedown', (e) => {
+            // --- Helper to get coordinates from Mouse or Touch event ---
+            const getInputY = (e) => {
+                if (e.type.includes('touch')) {
+                    return e.touches[0].clientY;
+                }
+                return e.clientY;
+            };
+
+            // --- Interaction Start (MouseDown / TouchStart) ---
+            const handleStart = (e) => {
                 if (!currentDoc || !currentDoc.isLoaded) return;
-                if (globalState.isPaused) return; 
+
+                // If we are paused, this interaction resumes the session.
+                if (globalState.isPaused) {
+                    resumeSession();
+                }
 
                 currentDoc.isDragging = true;
-                currentDoc.lastMouseY = e.clientY;
+                currentDoc.lastMouseY = getInputY(e);
                 container.classList.add('dragging');
                 clearTimeout(globalState.slackTimer);
-            });
 
-            overlay.addEventListener('mousedown', (e) => {
-                if (!currentDoc || !currentDoc.isLoaded) return;
-                resumeSession();
-                currentDoc.isDragging = true;
-                currentDoc.lastMouseY = e.clientY;
-                container.classList.add('dragging');
-                e.preventDefault(); 
-            });
-            
-            document.addEventListener('mousemove', (e) => {
+                // Prevent default touch scroll to use our custom drag
+                if (e.type.includes('touch')) e.preventDefault();
+            };
+
+            // --- Interaction Move (MouseMove / TouchMove) ---
+            const handleMove = (e) => {
                 if (!currentDoc || !currentDoc.isDragging) return;
-                const deltaY = e.clientY - currentDoc.lastMouseY;
-                currentDoc.lastMouseY = e.clientY;
+
+                // Prevent default touch scroll
+                if (e.type.includes('touch')) e.preventDefault();
+
+                const currentY = getInputY(e);
+                const deltaY = currentY - currentDoc.lastMouseY;
+                currentDoc.lastMouseY = currentY;
+
                 const containerHeight = container.clientHeight;
                 const maxScroll = Math.max(0, currentDoc.totalHeight - containerHeight);
                 const newScroll = Math.max(0, Math.min(maxScroll, currentDoc.scrollTop - deltaY));
+
                 if (newScroll !== currentDoc.scrollTop) {
                     currentDoc.scrollTop = newScroll;
                     setScrollTop(currentDoc.scrollTop);
                     renderVisiblePages();
                     updateCurrentPage();
                 }
-            });
-            
-            document.addEventListener('mouseup', () => {
+            };
+
+            // --- Interaction End (MouseUp / TouchEnd) ---
+            const handleEnd = () => {
                 if (!currentDoc || !currentDoc.isDragging) return;
                 currentDoc.isDragging = false;
                 container.classList.remove('dragging');
+
                 if (globalState.isReading && !globalState.isPaused) {
                     clearTimeout(globalState.slackTimer);
                     globalState.slackTimer = setTimeout(pauseSession, 5000);
                 }
-            });
+            };
+
+            // --- Bind Mouse Events ---
+            container.addEventListener('mousedown', handleStart);
+            // Specific listener for overlay to capture clicks when paused
+            overlay.addEventListener('mousedown', handleStart);
+
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('mouseup', handleEnd);
+
+            // --- Bind Touch Events ---
+            // { passive: false } is required to call preventDefault() inside touchmove
+            container.addEventListener('touchstart', handleStart, { passive: false });
+            overlay.addEventListener('touchstart', handleStart, { passive: false });
+
+            document.addEventListener('touchmove', handleMove, { passive: false });
+            document.addEventListener('touchend', handleEnd);
+            document.addEventListener('touchcancel', handleEnd); // Handle interruptions
         }
 
         function updateCurrentPage() {
@@ -1229,6 +1550,7 @@
             setupScrollHandling();
             setupSettings();
             setupLayoutControls();
+            setupResizeObserver();
             bindEvents();
             updateStatus('Waiting for document', 'bg-[--muted]');
             updateLayoutUI();
@@ -1237,4 +1559,5 @@
         init();
     </script>
 </body>
+
 </html>
