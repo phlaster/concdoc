@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>concdoc — PDF Concentration Tool</title>
+    <title>concdoc — stay concentrated!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -77,7 +77,6 @@
 
         #pdf-container { cursor: grab; user-select: none; }
         #pdf-container.dragging { cursor: grabbing; }
-        #pdf-container.paused { cursor: not-allowed; }
 
         .stat-card {
             background: var(--card);
@@ -112,21 +111,44 @@
             background: var(--bg-elevated);
         }
 
-        .banner-overlay {
-            backdrop-filter: blur(8px);
-            background: rgba(10, 15, 20, 0.85);
+        /* Pause Overlay */
+        #pause-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            background: rgba(10, 15, 20, 0.6);
+            backdrop-filter: blur(0px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease, backdrop-filter 0.8s ease;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .progress-ring circle { transition: stroke-dashoffset 0.5s ease; }
+        #pause-overlay.active {
+            opacity: 1;
+            backdrop-filter: blur(6px);
+            pointer-events: auto;
+        }
 
-        .tab-item { transition: all 0.2s ease; }
-        .tab-item:hover { background: var(--bg-elevated); }
-        .tab-item.active { background: var(--bg-elevated); border-bottom: 2px solid var(--accent); }
-        .tab-item.active .tab-title { color: var(--accent); }
+        /* Pause Prompt Text */
+        #pause-prompt {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            text-align: center;
+            pointer-events: none;
+        }
 
-        /* Settings Menu & Z-Index Fix */
+        #pause-overlay.show-prompt #pause-prompt {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         #card-timeline {
-            z-index: 10; /* Ensure timeline card sits above the next sibling (Session Details) */
+            z-index: 10;
             position: relative;
         }
         
@@ -140,13 +162,11 @@
             border-radius: 12px;
             padding: 16px;
             width: 240px;
-            z-index: 50; /* High z-index for the menu itself */
+            z-index: 50;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
             display: none;
         }
-        .settings-menu.open {
-            display: block;
-        }
+        .settings-menu.open { display: block; }
 
         input[type="number"] {
             background: var(--bg);
@@ -163,12 +183,23 @@
             border-color: var(--accent);
         }
 
+        /* Virtual Scroll Container */
+        #pdf-pages { position: relative; width: 100%; }
+        .pdf-page-canvas { 
+            display: block; 
+            margin: 0 auto 10px auto; 
+            position: absolute;
+            left: 0;
+            right: 0;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
                 animation-iteration-count: 1 !important;
                 transition-duration: 0.01ms !important;
             }
+            #pause-overlay, #pause-prompt { transition: none; }
         }
     </style>
 </head>
@@ -202,7 +233,7 @@
                     </div>
                 </div>
 
-                <div id="loading-overlay" class="absolute inset-0 banner-overlay flex items-center justify-center z-15 hidden">
+                <div id="loading-overlay" class="absolute inset-0 bg-[rgba(10,15,20,0.9)] flex items-center justify-center z-15 hidden">
                     <div class="text-center">
                         <div class="w-16 h-16 mx-auto mb-4 border-4 border-[--border] border-t-[--accent] rounded-full animate-spin"></div>
                         <p class="text-[--muted]">Loading document...</p>
@@ -210,10 +241,18 @@
                 </div>
 
                 <div id="pdf-container" class="absolute inset-0 overflow-hidden hidden">
-                    <div id="pdf-pages" class="relative" style="transform: translateY(0);"></div>
+                    <div id="pdf-pages" class="relative"></div>
                 </div>
 
-                <div id="start-banner" class="absolute inset-0 banner-overlay flex items-center justify-center z-20 hidden">
+                <!-- Pause Overlay with Prompt inside -->
+                <div id="pause-overlay" class="">
+                    <div id="pause-prompt">
+                        <p id="pause-timer" class="mono text-4xl text-[--fg] opacity-80 mb-2">00:00</p>
+                        <p class="text-base text-[--muted]">Paused. Click or drag to continue reading.</p>
+                    </div>
+                </div>
+
+                <div id="start-banner" class="absolute inset-0 bg-[rgba(10,15,20,0.85)] backdrop-blur-sm flex items-center justify-center z-20 hidden">
                     <button id="btn-start" class="group bg-[--card] border border-[--accent] rounded-2xl p-8 text-center animate-glow hover:scale-105 transition-transform">
                         <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-[--accent-dim] flex items-center justify-center group-hover:bg-[--accent] transition-colors">
                             <svg class="w-10 h-10 text-[--accent] group-hover:text-[--bg] transition-colors" fill="currentColor" viewBox="0 0 24 24">
@@ -222,18 +261,6 @@
                         </div>
                         <h3 class="text-2xl font-semibold mb-2">Ready to Focus</h3>
                         <p class="text-[--muted]">Click to start reading session</p>
-                    </button>
-                </div>
-
-                <div id="pause-banner" class="absolute inset-0 banner-overlay flex items-center justify-center z-20 hidden">
-                    <button id="btn-resume" class="group bg-[--card] border border-[--warning] rounded-2xl p-8 text-center hover:scale-105 transition-transform">
-                        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-[rgba(255,179,71,0.15)] flex items-center justify-center group-hover:bg-[--warning] transition-colors">
-                            <svg class="w-10 h-10 text-[--warning] group-hover:text-[--bg] transition-colors" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-semibold mb-2">Session Paused</h3>
-                        <p class="text-[--muted]">Click to continue reading</p>
                     </button>
                 </div>
 
@@ -280,7 +307,6 @@
                         <p class="text-[--muted] text-sm mb-1">Pages Progress</p>
                         <p id="stat-pages" class="mono text-3xl font-medium text-[--fg]">0</p>
                     </div>
-                    <!-- SWAP 1: Focus Score moves here (Grid Bottom Right) -->
                     <div class="stat-card rounded-xl p-5 relative overflow-hidden">
                         <p class="text-[--muted] text-sm mb-1">Focus Score</p>
                         <p id="stat-focus" class="mono text-3xl font-medium text-[--fg]">0%</p>
@@ -289,7 +315,6 @@
                     </div>
                 </div>
 
-                <!-- SWAP 2: Concentration moves here (Circle Section) -->
                 <div id="card-concentration" class="stat-card rounded-xl p-6 mb-6 flex items-center gap-6">
                     <div class="relative flex-shrink-0">
                         <svg class="progress-ring w-24 h-24 -rotate-90" viewBox="0 0 100 100">
@@ -307,7 +332,6 @@
                     </div>
                 </div>
 
-                <!-- Timeline Card with Z-Index ID -->
                 <div id="card-timeline" class="stat-card rounded-xl p-6 mb-6 relative">
                     <div class="flex items-center justify-between mb-4">
                         <div>
@@ -324,7 +348,6 @@
                                 </svg>
                             </button>
                             
-                            <!-- Settings Menu -->
                             <div id="settings-menu" class="settings-menu">
                                 <h5 class="font-semibold text-sm mb-3 text-[--fg]">Timeline Settings</h5>
                                 <div class="space-y-3">
@@ -397,7 +420,9 @@
             slackTimer: null,
             updateInterval: null, 
             secondTimer: null, 
-            scoreTimer: null, 
+            scoreTimer: null,
+            pausePromptTimer: null, // Timer for the pause overlay text
+            pausePromptTimeout: null, // Timeout to show the pause overlay text
             
             activeSeconds: 0, 
             diffScores: [], 
@@ -414,13 +439,14 @@
         let activeTabId = null;
         let tabCounter = 0;
         let currentDoc = null;
+        
+        let lastRenderedSecond = -1;
 
         function createDocumentState(id, name) {
             return {
                 id: id,
                 name: name,
                 pdfDoc: null,
-                pdfPages: [],
                 totalPages: 0,
                 isLoaded: false,
                 scrollTop: 0,
@@ -428,6 +454,10 @@
                 currentPage: 1,
                 isDragging: false,
                 lastMouseY: 0,
+                pagesMeta: [],
+                totalHeight: 0,
+                renderedPages: new Map(),
+                avgPageHeight: 0
             };
         }
 
@@ -442,10 +472,10 @@
             pdfContainer: document.getElementById('pdf-container'),
             pdfPages: document.getElementById('pdf-pages'),
             startBanner: document.getElementById('start-banner'),
-            pauseBanner: document.getElementById('pause-banner'),
+            pauseOverlay: document.getElementById('pause-overlay'),
+            pauseTimer: document.getElementById('pause-timer'), // New
             btnAddTab: document.getElementById('btn-add-tab'),
             btnStart: document.getElementById('btn-start'),
-            btnResume: document.getElementById('btn-resume'),
             btnReset: document.getElementById('btn-reset'),
             tabsContainer: document.getElementById('tabs-container'),
             pageIndicator: document.getElementById('page-indicator'),
@@ -457,19 +487,15 @@
             statElapsed: document.getElementById('stat-elapsed'),
             statReading: document.getElementById('stat-reading'),
             statPages: document.getElementById('stat-pages'),
-            
-            // Swapped Elements
-            statFocus: document.getElementById('stat-focus'), // Grid item (Lifetime)
-            focusBar: document.getElementById('focus-bar'), // Grid item bar
-            ringPercentage: document.getElementById('ring-percentage'), // Circle (Rolling)
-            progressCircle: document.getElementById('progress-circle'), // Circle Ring
-            
+            statFocus: document.getElementById('stat-focus'),
+            focusBar: document.getElementById('focus-bar'),
+            ringPercentage: document.getElementById('ring-percentage'),
+            progressCircle: document.getElementById('progress-circle'),
             detailDocs: document.getElementById('detail-docs'),
             detailStart: document.getElementById('detail-start'),
             detailPauses: document.getElementById('detail-pauses'),
             detailPauseAvg: document.getElementById('detail-pause-avg'),
             detailAvg: document.getElementById('detail-avg'),
-            
             btnSettings: document.getElementById('btn-settings'),
             settingsMenu: document.getElementById('settings-menu'),
             inputInterval: document.getElementById('input-interval'),
@@ -573,9 +599,8 @@
         function switchToTab(id) {
             if (!documents.has(id)) return;
             if (currentDoc && currentDoc.isLoaded) {
-                const transform = elements.pdfPages.style.transform;
-                const match = transform.match(/translateY\(-(\d+(?:\.\d+)?)px\)/);
-                if (match) currentDoc.scrollTop = parseFloat(match[1]);
+                currentDoc.scrollTop = getScrollTop();
+                clearRenderedPages(currentDoc); 
             }
             activeTabId = id;
             currentDoc = documents.get(id);
@@ -585,6 +610,8 @@
 
         function closeTab(id) {
             if (!documents.has(id)) return;
+            const doc = documents.get(id);
+            if (doc.pdfDoc) doc.pdfDoc.destroy();
             documents.delete(id);
             const tabEl = document.querySelector(`[data-tab-id="${id}"]`);
             if (tabEl) tabEl.remove();
@@ -602,23 +629,30 @@
             elements.loadingOverlay.classList.add('hidden');
             elements.pdfContainer.classList.remove('hidden');
             elements.pageIndicator.classList.remove('hidden');
-            elements.pdfPages.innerHTML = '';
-            currentDoc.pdfPages.forEach(({canvas}) => {
-                const clone = canvas.cloneNode(true);
-                const ctx = clone.getContext('2d');
-                ctx.drawImage(canvas, 0, 0);
-                elements.pdfPages.appendChild(clone);
-            });
-            elements.pdfPages.style.transform = `translateY(-${currentDoc.scrollTop}px)`;
+            elements.pdfPages.style.height = currentDoc.totalHeight + 'px';
+            elements.pdfPages.innerHTML = ''; 
+            currentDoc.renderedPages.clear();
+            setScrollTop(currentDoc.scrollTop);
+            renderVisiblePages();
             elements.totalPagesEl.textContent = currentDoc.totalPages;
             elements.currentPageEl.textContent = currentDoc.currentPage;
             if (globalState.sessionStartTime && globalState.isPaused) {
-                elements.pauseBanner.classList.remove('hidden'); elements.startBanner.classList.add('hidden');
+                elements.startBanner.classList.add('hidden');
             } else if (globalState.sessionStartTime) {
-                elements.startBanner.classList.add('hidden'); elements.pauseBanner.classList.add('hidden');
+                elements.startBanner.classList.add('hidden');
             } else {
-                elements.startBanner.classList.remove('hidden'); elements.pauseBanner.classList.add('hidden');
+                elements.startBanner.classList.remove('hidden');
             }
+        }
+
+        function getScrollTop() {
+            const transform = elements.pdfPages.style.transform;
+            const match = transform.match(/translateY\(-(\d+(?:\.\d+)?)px\)/);
+            return match ? parseFloat(match[1]) : 0;
+        }
+
+        function setScrollTop(val) {
+            elements.pdfPages.style.transform = `translateY(-${val}px)`;
         }
 
         function showDropZone() {
@@ -626,7 +660,6 @@
             elements.loadingOverlay.classList.add('hidden');
             elements.pdfContainer.classList.add('hidden');
             elements.startBanner.classList.add('hidden');
-            elements.pauseBanner.classList.add('hidden');
             elements.pageIndicator.classList.add('hidden');
         }
 
@@ -634,6 +667,76 @@
             elements.dropZone.classList.add('hidden');
             elements.loadingOverlay.classList.remove('hidden');
             elements.pdfContainer.classList.add('hidden');
+        }
+
+        // =====================
+        // Virtual Scrolling Logic
+        // =====================
+        function clearRenderedPages(doc) {
+            if (!doc) return;
+            doc.renderedPages.forEach(entry => {
+                if (entry.canvas) {
+                    entry.canvas.width = 0;
+                    entry.canvas.height = 0;
+                }
+            });
+            doc.renderedPages.clear();
+            elements.pdfPages.innerHTML = '';
+        }
+
+        async function renderVisiblePages() {
+            if (!currentDoc || !currentDoc.pdfDoc) return;
+            const containerHeight = elements.pdfContainer.clientHeight;
+            const scrollTop = getScrollTop();
+            const buffer = 1;
+            let firstVisible = -1;
+            let lastVisible = -1;
+            const meta = currentDoc.pagesMeta;
+            for (let i = 0; i < meta.length; i++) {
+                const p = meta[i];
+                if ((p.top + p.height) > scrollTop && p.top < (scrollTop + containerHeight)) {
+                    if (firstVisible === -1) firstVisible = i;
+                    lastVisible = i;
+                }
+            }
+            if (firstVisible === -1) return;
+            const startIdx = Math.max(0, firstVisible - buffer);
+            const endIdx = Math.min(meta.length - 1, lastVisible + buffer);
+            const neededIndices = new Set();
+            for (let i = startIdx; i <= endIdx; i++) neededIndices.add(i);
+            currentDoc.renderedPages.forEach((entry, idx) => {
+                if (!neededIndices.has(idx)) {
+                    if (entry.canvas && entry.canvas.parentNode) entry.canvas.parentNode.removeChild(entry.canvas);
+                    if (entry.canvas) entry.canvas.width = 0;
+                    currentDoc.renderedPages.delete(idx);
+                }
+            });
+            for (let i = startIdx; i <= endIdx; i++) {
+                if (!currentDoc.renderedPages.has(i)) {
+                    const pageInfo = meta[i];
+                    const canvas = document.createElement('canvas');
+                    canvas.className = 'pdf-page-canvas';
+                    canvas.style.width = pageInfo.width + 'px';
+                    canvas.style.height = pageInfo.height + 'px';
+                    canvas.style.top = pageInfo.top + 'px';
+                    elements.pdfPages.appendChild(canvas);
+                    renderPage(i, canvas);
+                }
+            }
+        }
+
+        async function renderPage(pageIndex, canvas) {
+            if (!currentDoc) return;
+            try {
+                const page = await currentDoc.pdfDoc.getPage(pageIndex + 1);
+                const viewport = page.getViewport({ scale: 1.5 });
+                if (!currentDoc || !currentDoc.renderedPages) return;
+                currentDoc.renderedPages.set(pageIndex, { canvas });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                const context = canvas.getContext('2d');
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+            } catch (e) { console.error("Render error", e); }
         }
 
         // =====================
@@ -648,18 +751,15 @@
                 const docState = createDocumentState(id, file.name);
                 docState.pdfDoc = pdfDoc;
                 docState.totalPages = pdfDoc.numPages;
+                let totalH = 0;
                 for (let i = 1; i <= docState.totalPages; i++) {
                     const page = await pdfDoc.getPage(i);
                     const viewport = page.getViewport({ scale: 1.5 });
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-                    canvas.className = 'block mx-auto mb-2';
-                    canvas.dataset.page = i;
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-                    docState.pdfPages.push({ canvas, height: viewport.height });
+                    docState.pagesMeta.push({ width: viewport.width, height: viewport.height, top: totalH });
+                    totalH += viewport.height;
                 }
+                docState.totalHeight = totalH;
+                if (docState.pagesMeta.length > 0) docState.avgPageHeight = totalH / docState.pagesMeta.length;
                 docState.isLoaded = true;
                 documents.set(id, docState);
                 const tab = createTab(id, file.name);
@@ -725,16 +825,33 @@
             globalState.isReading = false;
             globalState.pauseCount++;
             globalState.currentPauseStart = Date.now();
-            elements.pauseBanner.classList.remove('hidden');
-            elements.pdfContainer.classList.add('paused');
+            
+            elements.pauseOverlay.classList.add('active');
             updateStatus('Paused', 'bg-[--warning]');
             elements.detailPauses.textContent = globalState.pauseCount;
+
+            // Show prompt after 5 seconds of full dimming
+            clearTimeout(globalState.pausePromptTimeout);
+            globalState.pausePromptTimeout = setTimeout(() => {
+                elements.pauseOverlay.classList.add('show-prompt');
+                // Start updating the pause timer text
+                clearInterval(globalState.pausePromptTimer);
+                updatePauseTimer(); // Immediate update
+                globalState.pausePromptTimer = setInterval(updatePauseTimer, 1000);
+            }, 5000);
+        }
+
+        function updatePauseTimer() {
+            if (!globalState.currentPauseStart) return;
+            const duration = Date.now() - globalState.currentPauseStart;
+            elements.pauseTimer.textContent = formatTimeShort(duration);
         }
 
         function resumeSession() {
             globalState.isPaused = false;
             globalState.isReading = true;
             globalState.lastActionTime = Date.now();
+            
             if (globalState.currentPauseStart) {
                 const pauseDuration = Date.now() - globalState.currentPauseStart;
                 globalState.totalPauseDuration += pauseDuration;
@@ -743,8 +860,13 @@
                 elements.detailPauseAvg.textContent = formatTimeShort(avgPause);
             }
             if (currentDoc) currentDoc.resumeScrollBaseline = currentDoc.scrollTop;
-            elements.pauseBanner.classList.add('hidden');
-            elements.pdfContainer.classList.remove('paused');
+            
+            elements.pauseOverlay.classList.remove('active');
+            elements.pauseOverlay.classList.remove('show-prompt'); // Hide prompt
+            
+            clearTimeout(globalState.pausePromptTimeout);
+            clearInterval(globalState.pausePromptTimer);
+            
             updateStatus('Reading', 'bg-[--accent] animate-pulse-slow');
         }
 
@@ -760,6 +882,7 @@
             globalState.activeSeconds = 0;
             globalState.diffScores = [];
             globalState.timelineData = [];
+            lastRenderedSecond = -1;
             
             documents.forEach(doc => doc.resumeScrollBaseline = 0);
             concentrationChart.data.labels = [];
@@ -769,8 +892,6 @@
             elements.statElapsed.textContent = '00:00:00';
             elements.statReading.textContent = '00:00:00';
             elements.statPages.textContent = '0';
-            
-            // Reset swapped elements
             elements.statFocus.textContent = '0%';
             elements.focusBar.style.width = '0%';
             elements.ringPercentage.textContent = '0%';
@@ -782,9 +903,13 @@
             elements.detailAvg.textContent = '--%';
             elements.statusTime.textContent = '--:--';
             
+            elements.pauseOverlay.classList.remove('active');
+            elements.pauseOverlay.classList.remove('show-prompt');
+            clearTimeout(globalState.pausePromptTimeout);
+            clearInterval(globalState.pausePromptTimer);
+            
             if (documents.size > 0) {
                 elements.startBanner.classList.remove('hidden');
-                elements.pauseBanner.classList.add('hidden');
                 updateStatus('Ready to start', 'bg-[--warning]');
             }
         }
@@ -794,69 +919,42 @@
         // =====================
         function startTimers() {
             globalState.updateInterval = setInterval(updateStats, 100);
-            
             globalState.secondTimer = setInterval(() => {
                 if (globalState.isReading) globalState.activeSeconds++;
             }, 1000);
-
             startScoreTimer();
         }
 
         function startScoreTimer() {
             if (globalState.scoreTimer) clearInterval(globalState.scoreTimer);
-            
             const intervalMs = globalState.config.measureIntervalSec * 1000;
-            
             globalState.scoreTimer = setInterval(() => {
                 if (!globalState.sessionStartTime) return;
-
-                // Calculate score for the passed window
                 const score = Math.round((globalState.activeSeconds / globalState.config.measureIntervalSec) * 100);
-                
-                // Reset counter
                 globalState.activeSeconds = 0;
-
-                // Add to history queue
                 globalState.diffScores.push(score);
-
-                // Limit queue size
                 const maxItems = (globalState.config.historyMin * 60) / globalState.config.measureIntervalSec;
-                if (globalState.diffScores.length > maxItems) {
-                    globalState.diffScores.shift();
-                }
-
-                // Calculate Rolling Average for Chart
+                if (globalState.diffScores.length > maxItems) globalState.diffScores.shift();
                 const windowItems = (globalState.config.avgWindowMin * 60) / globalState.config.measureIntervalSec;
                 const recentScores = globalState.diffScores.slice(-windowItems);
-                const avgScore = recentScores.length > 0 
-                    ? Math.round(recentScores.reduce((a, b) => a + b, 0) / recentScores.length) 
-                    : 0;
-
-                // Update Chart
+                const avgScore = recentScores.length > 0 ? Math.round(recentScores.reduce((a, b) => a + b, 0) / recentScores.length) : 0;
                 const timeLabel = formatTimeClock(new Date());
                 globalState.timelineData.push(avgScore);
-                
                 const chartPoints = (globalState.config.historyMin * 60) / globalState.config.measureIntervalSec;
                 if (globalState.timelineData.length > chartPoints) {
                     globalState.timelineData.shift();
                     concentrationChart.data.labels.shift();
                 }
-                
                 concentrationChart.data.labels.push(timeLabel);
                 concentrationChart.data.datasets[0].data = globalState.timelineData;
                 concentrationChart.update('none');
-
-                // UPDATE SWAPPED CONCENTRATION (Circle)
                 elements.ringPercentage.textContent = avgScore + '%';
                 const offset = 264 - (264 * Math.min(100, avgScore) / 100);
                 elements.progressCircle.style.strokeDashoffset = offset;
-
-                // Update Detail Avg
                 if (globalState.timelineData.length > 0) {
                     const totalAvg = Math.round(globalState.timelineData.reduce((a, b) => a + b, 0) / globalState.timelineData.length);
                     elements.detailAvg.textContent = totalAvg + '%';
                 }
-
             }, intervalMs);
         }
 
@@ -865,41 +963,34 @@
             clearInterval(globalState.secondTimer);
             clearInterval(globalState.scoreTimer);
             clearTimeout(globalState.slackTimer);
+            clearTimeout(globalState.pausePromptTimeout);
+            clearInterval(globalState.pausePromptTimer);
         }
 
         function updateStats() {
             if (!globalState.sessionStartTime) return;
-            
             const now = Date.now();
             const totalElapsed = now - globalState.sessionStartTime;
-            
-            // Update Lifetime Reading Time
             if (globalState.isReading && globalState.lastActionTime) {
                 globalState.readingTimeMs += now - globalState.lastActionTime;
                 globalState.lastActionTime = now;
             }
-            
-            // Calculate Focus Score (Lifetime)
-            const focusScore = totalElapsed > 0 ? Math.round((globalState.readingTimeMs / totalElapsed) * 100) : 0;
-            
-            elements.statElapsed.textContent = formatTime(totalElapsed);
-            elements.statReading.textContent = formatTime(globalState.readingTimeMs);
-            elements.statusTime.textContent = formatTime(totalElapsed);
-            
-            // UPDATE SWAPPED FOCUS SCORE (Grid)
-            elements.statFocus.textContent = focusScore + '%';
-            elements.focusBar.style.width = focusScore + '%';
-            
-            // Update Pages
-            let totalPagesProgress = 0;
-            documents.forEach(doc => {
-                const progress = Math.max(0, doc.scrollTop - doc.resumeScrollBaseline);
-                if (doc.pdfPages.length > 0) {
-                    const avgPageHeight = doc.pdfPages.reduce((sum, p) => sum + p.height, 0) / doc.pdfPages.length;
-                    totalPagesProgress += Math.floor(progress / avgPageHeight);
-                }
-            });
-            elements.statPages.textContent = totalPagesProgress;
+            const currentSecond = Math.floor(totalElapsed / 1000);
+            if (currentSecond !== lastRenderedSecond) {
+                lastRenderedSecond = currentSecond;
+                const focusScore = totalElapsed > 0 ? Math.round((globalState.readingTimeMs / totalElapsed) * 100) : 0;
+                elements.statElapsed.textContent = formatTime(totalElapsed);
+                elements.statReading.textContent = formatTime(globalState.readingTimeMs);
+                elements.statusTime.textContent = formatTime(totalElapsed);
+                elements.statFocus.textContent = focusScore + '%';
+                elements.focusBar.style.width = focusScore + '%';
+                let totalPagesProgress = 0;
+                documents.forEach(doc => {
+                    const progress = Math.max(0, doc.scrollTop - doc.resumeScrollBaseline);
+                    if (doc.avgPageHeight > 0) totalPagesProgress += Math.floor(progress / doc.avgPageHeight);
+                });
+                elements.statPages.textContent = totalPagesProgress;
+            }
         }
 
         // =====================
@@ -910,37 +1001,28 @@
                 e.stopPropagation();
                 elements.settingsMenu.classList.toggle('open');
             });
-
             document.addEventListener('click', (e) => {
                 if (!elements.settingsMenu.contains(e.target) && e.target !== elements.btnSettings) {
                     elements.settingsMenu.classList.remove('open');
                 }
             });
-
             elements.btnApply.addEventListener('click', (e) => {
                 e.preventDefault();
                 const interval = parseInt(elements.inputInterval.value);
                 const window = parseInt(elements.inputWindow.value);
                 const history = parseInt(elements.inputHistory.value);
-
                 if (interval >= 5 && window >= 1 && history >= 10) {
                     globalState.config.measureIntervalSec = interval;
                     globalState.config.avgWindowMin = window;
                     globalState.config.historyMin = history;
-
                     elements.configAvgLabel.textContent = window;
                     elements.configHistoryLabel.textContent = history;
-
                     globalState.diffScores = [];
                     globalState.timelineData = [];
                     concentrationChart.data.labels = [];
                     concentrationChart.data.datasets[0].data = [];
                     concentrationChart.update();
-
-                    if (globalState.sessionStartTime) {
-                        startScoreTimer();
-                    }
-
+                    if (globalState.sessionStartTime) startScoreTimer();
                     elements.settingsMenu.classList.remove('open');
                 }
             });
@@ -951,14 +1033,25 @@
         // =====================
         function setupScrollHandling() {
             const container = elements.pdfContainer;
-            const pagesEl = elements.pdfPages;
-            
+            const overlay = elements.pauseOverlay;
+
             container.addEventListener('mousedown', (e) => {
-                if (!currentDoc || !currentDoc.isLoaded || globalState.isPaused) return;
+                if (!currentDoc || !currentDoc.isLoaded) return;
+                if (globalState.isPaused) return; 
+
                 currentDoc.isDragging = true;
                 currentDoc.lastMouseY = e.clientY;
                 container.classList.add('dragging');
                 clearTimeout(globalState.slackTimer);
+            });
+
+            overlay.addEventListener('mousedown', (e) => {
+                if (!currentDoc || !currentDoc.isLoaded) return;
+                resumeSession();
+                currentDoc.isDragging = true;
+                currentDoc.lastMouseY = e.clientY;
+                container.classList.add('dragging');
+                e.preventDefault(); 
             });
             
             document.addEventListener('mousemove', (e) => {
@@ -966,11 +1059,14 @@
                 const deltaY = e.clientY - currentDoc.lastMouseY;
                 currentDoc.lastMouseY = e.clientY;
                 const containerHeight = container.clientHeight;
-                const contentHeight = pagesEl.scrollHeight;
-                const maxScroll = Math.max(0, contentHeight - containerHeight);
-                currentDoc.scrollTop = Math.max(0, Math.min(maxScroll, currentDoc.scrollTop - deltaY));
-                pagesEl.style.transform = `translateY(-${currentDoc.scrollTop}px)`;
-                updateCurrentPage();
+                const maxScroll = Math.max(0, currentDoc.totalHeight - containerHeight);
+                const newScroll = Math.max(0, Math.min(maxScroll, currentDoc.scrollTop - deltaY));
+                if (newScroll !== currentDoc.scrollTop) {
+                    currentDoc.scrollTop = newScroll;
+                    setScrollTop(currentDoc.scrollTop);
+                    renderVisiblePages();
+                    updateCurrentPage();
+                }
             });
             
             document.addEventListener('mouseup', () => {
@@ -985,18 +1081,22 @@
         }
 
         function updateCurrentPage() {
-            if (!currentDoc || !currentDoc.pdfPages.length) return;
+            if (!currentDoc || currentDoc.pagesMeta.length === 0) return;
             const containerHeight = elements.pdfContainer.clientHeight;
             const viewportCenter = currentDoc.scrollTop + containerHeight / 2;
-            let currentHeight = 0;
-            for (let i = 0; i < currentDoc.pdfPages.length; i++) {
-                currentHeight += currentDoc.pdfPages[i].height;
-                if (viewportCenter < currentHeight) {
-                    currentDoc.currentPage = i + 1;
+            let low = 0, high = currentDoc.pagesMeta.length - 1, mid;
+            while (low <= high) {
+                mid = Math.floor((low + high) / 2);
+                const p = currentDoc.pagesMeta[mid];
+                if (viewportCenter >= p.top && viewportCenter < (p.top + p.height)) {
+                    currentDoc.currentPage = mid + 1;
                     elements.currentPageEl.textContent = currentDoc.currentPage;
-                    break;
-                }
+                    return;
+                } else if (viewportCenter < p.top) high = mid - 1;
+                else low = mid + 1;
             }
+            currentDoc.currentPage = 1;
+            elements.currentPageEl.textContent = 1;
         }
 
         // =====================
@@ -1004,7 +1104,6 @@
         // =====================
         function bindEvents() {
             elements.btnStart.addEventListener('click', startSession);
-            elements.btnResume.addEventListener('click', resumeSession);
             elements.btnReset.addEventListener('click', resetSession);
         }
 
